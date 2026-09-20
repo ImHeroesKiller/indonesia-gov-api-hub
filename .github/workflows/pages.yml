@@ -3,6 +3,8 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '.github/workflows/probe-*.yml'
   workflow_dispatch:
   schedule:
     - cron: "*/30 * * * *"
@@ -14,7 +16,7 @@ permissions:
 
 concurrency:
   group: nusadata-github-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
