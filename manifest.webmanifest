@@ -1,13 +1,18 @@
 {
-  "name": "NusaData — Portal Data Pemerintah Indonesia",
+  "name": "NusaData — Portal Data Publik Indonesia",
   "short_name": "NusaData",
-  "description": "Portal terpadu untuk melihat data publik pemerintah Indonesia secara langsung.",
+  "description": "Portal data publik Indonesia dari REST API pemerintah, BUMN, dan BUMD tanpa autentikasi.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f7fb",
   "theme_color": "#0d1728",
   "icons": [
-    {"src":"./assets/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
   ]
 }
