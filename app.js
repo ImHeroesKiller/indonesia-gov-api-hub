@@ -15,7 +15,8 @@ const state={
   pamComplaints:[],
   waskita:[],
   status:null,
-  domainSummary:{thematic:{},operational:{}}
+  domainSummary:{thematic:{},operational:{}},
+  indicatorSummary:{indicators:[]}
 };
 
 const LIVE={
@@ -31,6 +32,7 @@ const LIVE={
   pamjaya:'./live/pamjaya-complaints.json',
   waskita:'./live/waskita-posts.json',
   domainSummary:'./live/domain-summary.json',
+  indicators:'./live/indicator-summary.json',
   status:'./live/status.json'
 };
 
@@ -607,6 +609,39 @@ function renderDomainData(){
   }
 }
 
+const indicatorMeta={
+  'inflation':'Inflasi',
+  'food-prices':'Harga Pangan',
+  'schools':'Sekolah',
+  'health-facilities':'Fasilitas Kesehatan',
+  'unemployment':'Pengangguran',
+  'poverty':'Kemiskinan',
+  'regional-budget':'APBD',
+  'environment-quality':'Kualitas Lingkungan',
+  'agriculture-production':'Produksi Pertanian'
+};
+
+function renderIndicators(){
+  const el=$('#indicatorGrid');
+  if(!el)return;
+  const rows=state.indicatorSummary?.indicators||[];
+  el.innerHTML=rows.map(x=>{
+    const latest=x.datasets?.[0];
+    const date=latest?.metadata_modified?new Date(latest.metadata_modified).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
+    return '<article class="indicator-card">'+
+      '<div class="indicator-head"><span>'+esc(indicatorMeta[x.key]||x.key)+'</span><strong>'+fmt(x.matches||0)+'</strong></div>'+
+      '<small>dataset cocok · update '+esc(date)+'</small>'+
+      '<p>'+esc(latest?.title||'Belum ada dataset yang cocok pada snapshot saat ini.')+'</p>'+
+    '</article>';
+  }).join('');
+}
+
+async function loadIndicators(){
+  try{state.indicatorSummary=await json(LIVE.indicators,15000)}
+  catch{state.indicatorSummary={indicators:[]}}
+  renderIndicators();
+}
+
 async function loadDomainData(){
   try{
     const d=await json(LIVE.domainSummary,15000);
@@ -822,6 +857,7 @@ async function reloadAll(){
     loadAdditionalData(),
     loadEnterpriseData(),
     loadDomainData(),
+    loadIndicators(),
     loadRegistry()
   ]);
   renderDashboard();
@@ -861,7 +897,8 @@ async function init(){
     loadBMKG(),
     loadAdditionalData(),
     loadEnterpriseData(),
-    loadDomainData()
+    loadDomainData(),
+    loadIndicators()
   ]);
   renderDashboard();
 
