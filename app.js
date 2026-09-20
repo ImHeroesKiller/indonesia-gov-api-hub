@@ -504,7 +504,7 @@ function renderSources(){
   $('#sourceGrid').innerHTML=state.sources.map(s=>
     '<article class="source-card panel">'+
       '<div class="source-head">'+
-        '<span class="source-level">PUBLIC · NO AUTH</span>'+
+        '<span class="source-level">'+esc(s.ownership?`${s.ownership} · PUBLIC`:'PUBLIC · NO AUTH')+'</span>'+
         '<span class="status-dot status-up"></span>'+
       '</div>'+
       '<h3>'+esc(s.name)+'</h3>'+
