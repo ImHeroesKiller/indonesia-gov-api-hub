@@ -40,7 +40,9 @@ jobs:
             'dashboardQuakes','dashboardEnterpriseHighlights','dashboardDatasets',
             'dashboardEnterpriseFeed','dashboardSourceHealth','foodstationProducts',
             'pamjayaTop','waskitaPosts','sourceGrid','dashboardDomainGrid',
-            'dashboardOperationalDomains','domainExplorerGrid','domainOperationalGrid','indicatorGrid','dashboardDirectStats','directStatsDetail','regionalCoverage'
+            'dashboardOperationalDomains','domainExplorerGrid','domainOperationalGrid','indicatorGrid',
+            'dashboardDirectStats','dashboardIHK','dashboardFoodPrices','directStatsDetail',
+            'directIHKTable','directFoodPriceGrid','directAgriculture','regionalCoverage'
           ];
           const missing=required.filter(id=>!ids.includes(id));
           if(missing.length){console.error('Missing dashboard IDs:',missing);process.exit(1)}
@@ -61,6 +63,20 @@ jobs:
               -H "Accept: application/json" \
               -sS "$url" -o "$out"
             jq -e . "$out" >/dev/null
+          }
+
+          curl_json_optional () {
+            url="$1"
+            out="$2"
+            if curl -fL --retry 2 --retry-all-errors --retry-delay 2 --connect-timeout 12 --max-time 45 \
+              -A "NusaData/1.0 (+https://github.com/ImHeroesKiller/indonesia-gov-api-hub)" \
+              -H "Accept: application/json" \
+              -sS "$url" -o "$out" && jq -e . "$out" >/dev/null 2>&1; then
+              return 0
+            fi
+            cat > "$out" <<'JSON'
+{"success":false,"unavailable":true,"result":{"count":0,"results":[]}}
+JSON
           }
 
           fetch_domain () {
@@ -126,23 +142,23 @@ jobs:
           curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "live/esdm-wk2026-count.json"
 
           # Cross-province public CKAN catalogs
-          curl_json "https://data.sumbarprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/sumbar-datasets.json"
-          curl_json "https://opendata.sumselprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/sumsel-datasets.json"
-          curl_json "https://data.kalbarprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/kalbar-datasets.json"
+          curl_json_optional "https://data.sumbarprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/sumbar-datasets.json"
+          curl_json_optional "https://opendata.sumselprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/sumsel-datasets.json"
+          curl_json_optional "https://data.kalbarprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/kalbar-datasets.json"
 
-          jq -e '.success==true and (.result.results|type=="array")' live/sumbar-datasets.json >/dev/null
-          jq -e '.success==true and (.result.results|type=="array")' live/sumsel-datasets.json >/dev/null
-          jq -e '.success==true and (.result.results|type=="array")' live/kalbar-datasets.json >/dev/null
+          jq -e '(.result.results|type=="array")' live/sumbar-datasets.json >/dev/null
+          jq -e '(.result.results|type=="array")' live/sumsel-datasets.json >/dev/null
+          jq -e '(.result.results|type=="array")' live/kalbar-datasets.json >/dev/null
 
           jq -n --slurpfile b live/banten-datasets.json --slurpfile g live/grobogan-datasets.json --slurpfile sb live/sumbar-datasets.json --slurpfile ss live/sumsel-datasets.json --slurpfile kb live/kalbar-datasets.json '
             {
               generated_at:(now|todateiso8601),
               regions:[
-                {key:"banten",name:"Banten",count:($b[0].result.count//0),items:($b[0].result.results//[])},
-                {key:"grobogan",name:"Grobogan",count:($g[0].result.count//0),items:($g[0].result.results//[])},
-                {key:"sumbar",name:"Sumatera Barat",count:($sb[0].result.count//0),items:($sb[0].result.results//[])},
-                {key:"sumsel",name:"Sumatera Selatan",count:($ss[0].result.count//0),items:($ss[0].result.results//[])},
-                {key:"kalbar",name:"Kalimantan Barat",count:($kb[0].result.count//0),items:($kb[0].result.results//[])}
+                {key:"banten",name:"Banten",available:true,count:($b[0].result.count//0),items:($b[0].result.results//[])},
+                {key:"grobogan",name:"Grobogan",available:true,count:($g[0].result.count//0),items:($g[0].result.results//[])},
+                {key:"sumbar",name:"Sumatera Barat",available:($sb[0].success==true),count:($sb[0].result.count//0),items:($sb[0].result.results//[])},
+                {key:"sumsel",name:"Sumatera Selatan",available:($ss[0].success==true),count:($ss[0].result.count//0),items:($ss[0].result.results//[])},
+                {key:"kalbar",name:"Kalimantan Barat",available:($kb[0].success==true),count:($kb[0].result.count//0),items:($kb[0].result.results//[])}
               ]
             }' > live/regional-summary.json
           jq -e '(.regions|length)==5' live/regional-summary.json >/dev/null
@@ -482,7 +498,7 @@ jobs:
               "esdm_oil_gas_wells": $(jq -r '.operational.oil_gas_wells.count' live/domain-summary.json),
               "esdm_working_areas_2026": $(jq -r '.operational.oil_gas_working_areas_2026.count' live/domain-summary.json),
               "direct_statistics": 9,
-              "regional_open_data": 5
+              "regional_open_data": $(jq -r '[.regions[] | select(.available==true)] | length' live/regional-summary.json)
             },
             "domains": $DOMAIN_COUNTS
           }
