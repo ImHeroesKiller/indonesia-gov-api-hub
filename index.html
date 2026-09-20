@@ -79,47 +79,90 @@
     </section>
 
     <section class="view" data-view="payroll">
-      <div class="page-heading"><div><span class="eyebrow"><i></i> EMPLOYMENT COST</span><h1>Payroll & BPJS Cost Calculator</h1><p>Hitung biaya riil pemberi kerja dan potongan karyawan berdasarkan upah, jumlah pekerja, wilayah, serta kelas risiko JKK.</p></div></div>
+      <div class="page-heading">
+        <div>
+          <span class="eyebrow"><i></i> PROJECT PAYROLL TABLE</span>
+          <h1>Payroll, BPJS & Gross Contribution</h1>
+          <p>Struktur tabel diadaptasi dari financial model: HC × hari kerja × rate tenant / cost worker, lalu ditambah BPJS dan THR untuk mendapatkan total employment cost yang sebenarnya.</p>
+        </div>
+      </div>
 
-      <section class="calculator-layout">
-        <article class="panel calculator-controls">
-          <div class="section-head"><div><span class="kicker">INPUT</span><h2>Asumsi Payroll</h2></div></div>
-          <label>Wilayah
+      <section class="panel section-panel">
+        <div class="section-head">
+          <div><span class="kicker">ASSUMPTIONS</span><h2>Project Payroll Setup</h2></div>
+          <span class="status-chip">EDITABLE</span>
+        </div>
+        <div class="payroll-table-controls">
+          <label>Wilayah benchmark
             <select id="regionSelect"></select>
           </label>
           <label id="sectoralWrap" class="check-row hidden">
             <input id="useSectoral" type="checkbox"> Gunakan UMSK / upah sektoral
           </label>
-          <label>Gaji / upah dilaporkan
-            <input id="salaryInput" type="number" min="0" step="1000">
+          <label>Minimum wage override
+            <input id="minimumWageOverride" type="number" min="0" step="1000" placeholder="Kosong = ikut wilayah">
           </label>
-          <div id="minimumWageHint" class="input-hint"></div>
-          <label>Jumlah karyawan
-            <input id="headcountInput" type="number" min="1" step="1" value="100">
+          <label>Hari kerja / bulan
+            <input id="projectWorkdays" type="number" min="1" max="31" step="1" value="22">
           </label>
           <label>Risiko JKK
             <select id="jkkSelect"></select>
           </label>
-          <label class="check-row"><input id="includeThr" type="checkbox" checked> Include monthly THR accrual (1/12 upah)</label>
-          <div class="notice-card">PPh 21 belum dimasukkan ke employer cost karena dapat ditanggung pekerja atau di-gross-up perusahaan dan bergantung kategori TER/PTKP.</div>
-        </article>
+          <label class="check-row">
+            <input id="includeThr" type="checkbox" checked> Include THR accrual 1/12
+          </label>
+        </div>
+        <div id="minimumWageHint" class="input-hint"></div>
+      </section>
 
-        <article class="panel calculator-result">
-          <div class="section-head"><div><span class="kicker">RESULT</span><h2>Biaya Perusahaan</h2></div><span id="wageCompliance" class="status-chip">—</span></div>
-          <div class="big-result"><span>Total employer cost / bulan</span><strong id="totalEmployerCost">—</strong><small id="totalEmployerCostPerEmployee">—</small></div>
-          <div id="employerBreakdown" class="breakdown-list"></div>
-        </article>
+      <section class="panel section-panel payroll-table-panel">
+        <div class="section-head">
+          <div><span class="kicker">MANPOWER PROFITABILITY</span><h2>Perhitungan per posisi</h2></div>
+          <button id="resetPayrollTable" class="text-button">Reset model</button>
+        </div>
+        <div class="table-scroll">
+          <table class="business-calc-table" id="payrollTable">
+            <thead>
+              <tr>
+                <th>Posisi</th>
+                <th>HC</th>
+                <th>Hari</th>
+                <th>Rate Tenant / Hari</th>
+                <th>Cost Worker / Hari</th>
+                <th>Revenue / Bulan</th>
+                <th>Gaji / Bulan / Orang</th>
+                <th>Minimum Wage</th>
+                <th>Status</th>
+                <th>BPJS Employer</th>
+                <th>THR Accrual</th>
+                <th>Total Employment Cost</th>
+                <th>Gross Contribution</th>
+                <th>Margin</th>
+              </tr>
+            </thead>
+            <tbody id="payrollTableBody"></tbody>
+            <tfoot id="payrollTableFoot"></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section class="dashboard-kpis payroll-summary-kpis">
+        <article class="panel metric-card"><span>Total HC</span><strong id="tableTotalHC">—</strong><small>billable manpower</small></article>
+        <article class="panel metric-card"><span>Revenue</span><strong id="tableRevenue">—</strong><small>per bulan</small></article>
+        <article class="panel metric-card"><span>Base Wage Cost</span><strong id="tableBaseWage">—</strong><small>sebelum burden</small></article>
+        <article class="panel metric-card"><span>BPJS Employer</span><strong id="tableBpjsEmployer">—</strong><small>per bulan</small></article>
+        <article class="panel metric-card"><span>Total Employment Cost</span><strong id="tableEmploymentCost">—</strong><small>incl. THR accrual</small></article>
+        <article class="panel metric-card"><span>Gross Contribution</span><strong id="tableGrossContribution">—</strong><small id="tableGrossMargin">—</small></article>
       </section>
 
       <section class="dashboard-two-column">
         <article class="panel section-panel">
-          <div class="section-head"><div><span class="kicker">EMPLOYER BPJS</span><h2>Ditanggung perusahaan</h2></div></div>
+          <div class="section-head"><div><span class="kicker">EMPLOYER BURDEN</span><h2>BPJS breakdown</h2></div></div>
           <div id="employerBpjsCards" class="rate-card-grid"></div>
         </article>
         <article class="panel section-panel">
-          <div class="section-head"><div><span class="kicker">EMPLOYEE DEDUCTIONS</span><h2>Potongan pekerja sebelum PPh 21</h2></div></div>
-          <div class="big-result compact"><span>Estimasi take-home sebelum PPh 21</span><strong id="employeeNetBeforeTax">—</strong></div>
-          <div id="employeeDeductions" class="breakdown-list"></div>
+          <div class="section-head"><div><span class="kicker">MODEL NOTES</span><h2>Interpretasi</h2></div></div>
+          <div id="payrollTableNotes" class="breakdown-list"></div>
         </article>
       </section>
     </section>
