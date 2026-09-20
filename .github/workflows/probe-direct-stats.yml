@@ -12,36 +12,17 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect final KPI resources
+      - name: Inspect remaining KPI resources
         shell: bash
         run: |
           set -e
-
           ds () {
             label="$1"; id="$2"; limit="${3:-100}"
             echo "===== $label ====="
             curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -sS               "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=$id&limit=$limit" |
               jq -c '{total:.result.total,fields:(.result.fields|map(.id)),records:.result.records}'
           }
-
-          find_ds () {
-            label="$1"; query="$2"
-            echo "===== DISCOVER $label :: $query ====="
-            curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -sS               "https://data.bantenprov.go.id/api/3/action/package_search?q=$query&rows=20" |
-              jq -c '.result.results[] | {
-                name,title,
-                ds:[.resources[]? | select(.datastore_active==true) | {id,name,format}]
-              } | select(.ds|length>0)' | head -n 30
-          }
-
-          ds "UNEMPLOYMENT" "6e533cef-056d-4dbc-a689-8f388d6cb6c7" 50
-          ds "POVERTY" "cabba131-d45d-4920-b224-2f0ade451466" 250
-          ds "REVENUE 2024" "785712cd-82a9-44ed-a6fe-3d54ec3432c8" 100
-          ds "SMK" "ec8cc1b4-9f87-46fd-98cb-d2aab92fb52a" 20
-          ds "WASTE" "143df65f-35ee-4419-91b6-b289e368a488" 20
-
-          find_ds "INFLATION ALT" "indeks%20harga%20konsumen"
-          find_ds "HEALTH" "jumlah%20fasilitas%20kesehatan"
-          find_ds "HEALTH RS" "jumlah%20rumah%20sakit"
-          find_ds "AGRI" "produksi%20tanaman"
-          find_ds "AGRI RICE" "produksi%20padi%20sawah"
+          ds "IHK" "60a377b4-d6a0-401f-ad82-dd30e7780393" 500
+          ds "FOOD PRICE" "074e77b2-b549-4490-940e-dd16fdb159b5" 100
+          ds "HOSPITALS" "27b948ad-aee7-4e57-a7b4-d43636c014c5" 100
+          ds "AGRICULTURE" "e3548ec4-68b5-44fc-bd8c-fcf514c2007d" 500
