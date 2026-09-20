@@ -9,3 +9,22 @@ html[data-theme=dark]{--bg:#07101d;--card:rgba(12,23,39,.9);--solid:#0e1a2b;--so
 @media(max-width:1050px){.desktop-nav{display:none}.live-grid,.dataset-grid,.results-grid,.source-grid{grid-template-columns:repeat(2,1fr)}.weather-timeline{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:720px){body{padding-bottom:75px}.topbar{height:64px;padding:0 14px}.brand small,.live-clock{display:none}.app-shell{width:calc(100% - 22px);padding:16px 0 35px}.hero-data{grid-template-columns:1fr;padding:27px 21px}.hero-data h1{font-size:39px}.source-badge{display:none}.hero-actions,.location-control,.dataset-search{grid-template-columns:1fr;display:grid}.live-grid,.dataset-grid,.results-grid,.source-grid{grid-template-columns:1fr}.weather-now{grid-template-columns:64px 1fr}.weather-facts{grid-column:1/-1;flex-direction:row}.weather-icon{font-size:43px}.weather-now strong{font-size:40px}.mini-forecast{grid-template-columns:repeat(5,minmax(64px,1fr));overflow:auto}.section-panel,.live-card{padding:19px}.page-heading h1{font-size:38px}.weather-timeline{grid-template-columns:repeat(2,1fr)}.quake-hero{grid-template-columns:1fr}.magnitude.big{width:96px;height:96px;padding-top:27px}.footer{width:calc(100% - 22px);display:block;text-align:center}.mobile-nav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));height:61px;z-index:60;background:color-mix(in srgb,var(--solid) 90%,transparent);backdrop-filter:blur(22px);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}.mobile-nav button{border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center}.mobile-nav button.active{color:var(--primary)}.mobile-nav small{font-size:8px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.public-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+.summary-card{padding:22px}
+.summary-card>strong{display:block;font-size:34px;line-height:1;letter-spacing:-.04em;margin:12px 0 8px}
+.summary-card h3{margin:0 0 8px;font-size:16px}
+.summary-card p{margin:0 0 14px;color:var(--muted);font-size:12px;min-height:54px}
+.geo-stat{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 18px}
+.geo-stat>div{background:var(--soft);border-radius:16px;padding:16px}
+.geo-stat span,.geo-stat small{display:block;color:var(--muted);font-size:10px}
+.geo-stat strong{display:block;font-size:30px;letter-spacing:-.04em;margin:5px 0}
+.region-list{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.region-row{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:13px 14px;border:1px solid var(--line);border-radius:14px;background:var(--solid)}
+.region-row strong,.region-row span{display:block}
+.region-row span{color:var(--muted);font-size:10px;margin-top:3px}
+.region-row code{font:10px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--soft);color:var(--text);padding:6px 8px;border-radius:8px;white-space:nowrap}
+.format-row{display:flex;gap:5px;flex-wrap:wrap;margin:12px 0}
+.format-row span{font-size:9px;padding:4px 7px;border-radius:7px;background:var(--soft);color:var(--muted);border:1px solid var(--line)}
+@media(max-width:1050px){.public-summary-grid{grid-template-columns:1fr 1fr}.region-list{grid-template-columns:1fr}}
+@media(max-width:720px){.public-summary-grid{grid-template-columns:1fr}.geo-stat{grid-template-columns:1fr 1fr}.summary-card p{min-height:0}.header-actions>.status-chip{display:none}}
