@@ -22,91 +22,51 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate frontend JavaScript
+      - name: Validate frontend
         run: |
           node --check app.js
-          node -e "JSON.parse(require('fs').readFileSync('data/apis.json','utf8')); console.log('registry json ok')"
+          node -e "const x=JSON.parse(require('fs').readFileSync('data/apis.json','utf8')); if(!x.policy?.public_rest_only) process.exit(1); if(x.sources.some(s=>s.auth!=='none')) process.exit(1); console.log('Public REST allowlist OK')"
 
-      - name: Fetch live government data
+      - name: Fetch verified public REST data
         shell: bash
         run: |
-          set +e
+          set -e
           mkdir -p live
 
-          cat > live/weather-kemayoran.json <<'EOF'
-          {"unavailable":true,"source":"BMKG","message":"Weather snapshot unavailable"}
-          EOF
-          cat > live/earthquake-latest.json <<'EOF'
-          {"unavailable":true,"source":"BMKG","message":"Latest earthquake snapshot unavailable"}
-          EOF
-          cat > live/earthquake-m5.json <<'EOF'
-          {"unavailable":true,"source":"BMKG","message":"M5+ earthquake snapshot unavailable"}
-          EOF
-          cat > live/earthquake-felt.json <<'EOF'
-          {"unavailable":true,"source":"BMKG","message":"Felt earthquake snapshot unavailable"}
-          EOF
-          cat > live/datasets-jakarta.json <<'EOF'
-          {"unavailable":true,"source":"Satu Data Jakarta","result":{"count":0,"results":[]}}
-          EOF
-          cat > live/datasets-nasional.json <<'EOF'
-          {"unavailable":true,"source":"Satu Data Indonesia","result":{"count":0,"results":[]}}
-          EOF
-
-          fetch_json () {
-            name="$1"
-            url="$2"
-            out="$3"
-            tmp="${out}.tmp"
-            code=$(curl -L --retry 2 --retry-delay 2 --connect-timeout 12 --max-time 35               -A "NusaData/1.0 (+https://github.com/ImHeroesKiller/indonesia-gov-api-hub)"               -H "Accept: application/json"               -sS -w "%{http_code}" -o "$tmp" "$url")
-            if [ "$code" = "200" ] && jq -e . "$tmp" >/dev/null 2>&1; then
-              mv "$tmp" "$out"
-              echo "LIVE_FETCH_OK: $name"
-            else
-              echo "LIVE_FETCH_FAIL: $name http=$code"
-              rm -f "$tmp"
-            fi
+          curl_json () {
+            url="$1"
+            out="$2"
+            curl -fL --retry 2 --retry-delay 2 --connect-timeout 12 --max-time 35               -A "NusaData/1.0 (+https://github.com/ImHeroesKiller/indonesia-gov-api-hub)"               -H "Accept: application/json"               -sS "$url" -o "$out"
+            jq -e . "$out" >/dev/null
           }
 
-          fetch_json "BMKG weather Kemayoran"             "https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=31.71.03.1001"             "live/weather-kemayoran.json"
+          curl_json             "https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=31.71.03.1001"             "live/weather-kemayoran.json"
 
-          fetch_json "BMKG latest earthquake"             "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json"             "live/earthquake-latest.json"
+          curl_json             "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json"             "live/earthquake-latest.json"
 
-          fetch_json "BMKG M5 earthquakes"             "https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json"             "live/earthquake-m5.json"
+          curl_json             "https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json"             "live/earthquake-m5.json"
 
-          fetch_json "BMKG felt earthquakes"             "https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json"             "live/earthquake-felt.json"
+          curl_json             "https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json"             "live/earthquake-felt.json"
 
-          fetch_json "Satu Data Jakarta datasets"             "https://satudata.jakarta.go.id/api/3/action/package_search?rows=60&sort=metadata_modified%20desc"             "live/datasets-jakarta.json"
-
-          fetch_json "Satu Data Indonesia datasets"             "https://data.go.id/api/3/action/package_search?rows=60&sort=metadata_modified%20desc"             "live/datasets-nasional.json"
+          jq -e '(.data|type=="array") and (.data|length>0)' live/weather-kemayoran.json >/dev/null
+          jq -e '.Infogempa.gempa != null' live/earthquake-latest.json >/dev/null
+          jq -e '(.Infogempa.gempa|type=="array")' live/earthquake-m5.json >/dev/null
+          jq -e '(.Infogempa.gempa|type=="array")' live/earthquake-felt.json >/dev/null
 
           cat > live/status.json <<EOF
           {
             "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "weather_available": $(jq -r 'if .unavailable then false else true end' live/weather-kemayoran.json 2>/dev/null || echo false),
-            "earthquake_latest_available": $(jq -r 'if .unavailable then false else true end' live/earthquake-latest.json 2>/dev/null || echo false),
-            "earthquake_m5_available": $(jq -r 'if .unavailable then false else true end' live/earthquake-m5.json 2>/dev/null || echo false),
-            "earthquake_felt_available": $(jq -r 'if .unavailable then false else true end' live/earthquake-felt.json 2>/dev/null || echo false),
-            "jakarta_datasets_available": $(jq -r 'if .unavailable then false else true end' live/datasets-jakarta.json 2>/dev/null || echo false),
-            "national_datasets_available": $(jq -r 'if .unavailable then false else true end' live/datasets-nasional.json 2>/dev/null || echo false)
+            "policy": "public-rest-no-auth-only",
+            "weather_available": true,
+            "earthquake_latest_available": true,
+            "earthquake_m5_available": true,
+            "earthquake_felt_available": true
           }
           EOF
-          echo "Snapshot status:"
-          cat live/status.json
-
-      - name: Verify BMKG weather snapshot
-        run: jq -e '(.unavailable // false) == false and (.data|type=="array")' live/weather-kemayoran.json
-
-      - name: Verify BMKG latest earthquake snapshot
-        run: jq -e '(.unavailable // false) == false and (.Infogempa.gempa != null)' live/earthquake-latest.json
-
-      - name: Verify BMKG M5 snapshot
-        run: jq -e '(.unavailable // false) == false and (.Infogempa.gempa|type=="array")' live/earthquake-m5.json
-
-      - name: Verify BMKG felt snapshot
-        run: jq -e '(.unavailable // false) == false and (.Infogempa.gempa|type=="array")' live/earthquake-felt.json
 
       - uses: actions/configure-pages@v5
 
