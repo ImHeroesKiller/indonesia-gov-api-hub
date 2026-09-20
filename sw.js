@@ -1,4 +1,4 @@
-const CACHE='nusadata-v11-investment-regional';
+const CACHE='nusadata-v10-investment-intelligence';
 
 const CORE=[
   './',
