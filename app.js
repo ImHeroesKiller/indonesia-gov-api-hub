@@ -77,7 +77,7 @@ function payrollNumbers(){
   const headcount=Math.max(1,Number($('#headcountInput').value)||1);
   const minWage=wageBenchmark(state.selectedRegion,$('#useSectoral').checked);
   const b=state.rates.bpjs;
-  const healthBase=Math.min(salary,Number(b.health.wage_ceiling));
+  const healthBase=Math.min(Math.max(salary,minWage),Number(b.health.wage_ceiling));
   const jpBase=Math.min(salary,Number(b.employment.jp.wage_ceiling_current));
   const employer={
     health:healthBase*b.health.employer_rate,
