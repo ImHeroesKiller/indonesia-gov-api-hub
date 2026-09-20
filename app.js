@@ -17,7 +17,8 @@ const state={
   status:null,
   domainSummary:{thematic:{},operational:{}},
   indicatorSummary:{indicators:[]},
-  directStats:{}
+  directStats:{},
+  regionalSummary:{regions:[]}
 };
 
 const LIVE={
@@ -35,6 +36,7 @@ const LIVE={
   domainSummary:'./live/domain-summary.json',
   indicators:'./live/indicator-summary.json',
   directStats:'./live/direct-stats.json',
+  regionalSummary:'./live/regional-summary.json',
   status:'./live/status.json'
 };
 
@@ -700,6 +702,16 @@ function statCard(label,value,meta,note=''){
   '</article>';
 }
 
+function renderRegionalCoverage(){
+  const el=$('#regionalCoverage'); if(!el)return;
+  const regions=state.regionalSummary?.regions||[];
+  el.innerHTML=regions.map(r=>{
+    const latest=[...(r.items||[])].sort((a,b)=>new Date(b.metadata_modified||0)-new Date(a.metadata_modified||0))[0];
+    return '<article class="regional-coverage-card"><div><span>'+esc(r.name)+'</span><strong>'+fmt(r.count)+'</strong></div><small>dataset publik</small><p>'+esc(latest?.title||'Katalog public REST aktif')+'</p></article>';
+  }).join('');
+}
+async function loadRegionalCoverage(){try{state.regionalSummary=await json(LIVE.regionalSummary,15000)}catch{state.regionalSummary={regions:[]}} renderRegionalCoverage()}
+
 function renderDirectStats(){
   const d=state.directStats;
   if(!d)return;
@@ -1056,6 +1068,7 @@ async function reloadAll(){
     loadDomainData(),
     loadIndicators(),
     loadDirectStats(),
+    loadRegionalCoverage(),
     loadRegistry()
   ]);
   renderDashboard();
@@ -1097,7 +1110,8 @@ async function init(){
     loadEnterpriseData(),
     loadDomainData(),
     loadIndicators(),
-    loadDirectStats()
+    loadDirectStats(),
+    loadRegionalCoverage()
   ]);
   renderDashboard();
 
