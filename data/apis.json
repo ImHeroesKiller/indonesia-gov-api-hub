@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-20",
+  "updated_at": "2026-09-21",
   "policy": {
     "public_rest_only": true,
     "requires_no_auth": true,
@@ -72,6 +72,32 @@
       "description": "Katalog dataset publik Kabupaten Grobogan melalui CKAN Action API tanpa autentikasi.",
       "portalUrl": "https://opendata.grobogan.go.id/",
       "apiUrl": "https://opendata.grobogan.go.id/api/3/action/package_search"
+    },
+    {
+      "id": "transjakarta-gtfs",
+      "name": "TransJakarta GTFS",
+      "agency": "PT Transportasi Jakarta",
+      "ownership": "BUMD",
+      "level": "BUMD DKI Jakarta",
+      "type": "GTFS Open Data",
+      "auth": "none",
+      "portalStatus": "up",
+      "description": "Data layanan TransJakarta dalam format GTFS terstandar yang dipublikasikan sebagai informasi publik oleh PPID PT Transportasi Jakarta.",
+      "portalUrl": "https://ppid.transjakarta.co.id/informasi/berkala",
+      "apiUrl": "https://ppid.transjakarta.co.id/informasi/berkala"
+    },
+    {
+      "id": "jakarta-bumd-transport-arcgis",
+      "name": "Transportasi Publik Jakarta",
+      "agency": "Pemprov DKI Jakarta / ekosistem BUMD transportasi",
+      "ownership": "BUMD ecosystem",
+      "level": "BUMD DKI Jakarta",
+      "type": "ArcGIS REST / GeoJSON",
+      "auth": "none",
+      "portalStatus": "up",
+      "description": "Titik transportasi publik Jakarta termasuk halte TransJakarta dan moda/stasiun terkait melalui ArcGIS REST publik tanpa autentikasi.",
+      "portalUrl": "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Titik_Transportasi_Umum_Jakarta_v3/FeatureServer/26",
+      "apiUrl": "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Titik_Transportasi_Umum_Jakarta_v3/FeatureServer/26/query"
     }
   ]
 }
