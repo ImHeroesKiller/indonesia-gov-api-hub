@@ -336,7 +336,8 @@ function catalogBase(key){
     aceh:'https://data.acehprov.go.id/id/dataset/',
     sumbar:'https://data.sumbarprov.go.id/dataset/',
     sumsel:'https://opendata.sumselprov.go.id/dataset/',
-    jateng:'https://data.jatengprov.go.id/dataset/'
+    jateng:'https://data.jatengprov.go.id/dataset/',
+    kaltim:'https://data.kaltimprov.go.id/dataset/'
   };
   return bases[key]||'#';
 }
@@ -900,7 +901,8 @@ const sourceStatusKey={
   'aceh-ckan':'aceh_ckan',
   'sumbar-ckan':'sumbar_ckan',
   'sumsel-ckan':'sumsel_ckan',
-  'jateng-ckan':'jateng_ckan'
+  'jateng-ckan':'jateng_ckan',
+  'kaltim-ckan':'kaltim_ckan'
 };
 
 function setText(id,value){
