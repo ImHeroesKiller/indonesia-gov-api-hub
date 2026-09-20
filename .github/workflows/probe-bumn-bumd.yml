@@ -12,52 +12,34 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe useful official public data
+      - name: Verify PLN public content REST
         shell: bash
         run: |
           set +e
-
           probe () {
-            name="$1"; url="$2"
+            name="$1"
+            url="$2"
             echo "===== $name ====="
             tmp=$(mktemp)
-            code=$(curl -L --retry 1 --connect-timeout 10 --max-time 30               -A "Mozilla/5.0 NusaData-Probe/1.0"               -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "$url")
-            echo "HTTP=$code BYTES=$(wc -c < "$tmp")"
+            code=$(curl -L --retry 1 --connect-timeout 10 --max-time 25               -A "NusaData-Probe/1.0" -H "Accept: application/json"               -sS -w "%{http_code}" -o "$tmp" "$url")
+            echo "HTTP=$code"
+            echo "MIME=$(file -b --mime-type "$tmp" 2>/dev/null)"
             if jq -e . "$tmp" >/dev/null 2>&1; then
               echo "JSON=valid"
-              jq -c 'if type=="object" then keys elif type=="array" then {"type":"array","length":length} else type end' "$tmp" | head -c 1500
+              jq -c 'if type=="object" then keys else type end' "$tmp" | head -c 800
               echo
-              jq -c '.' "$tmp" | head -c 2500
+              jq -c '.' "$tmp" | head -c 2600
               echo
             else
               echo "JSON=invalid"
-              head -c 500 "$tmp" | tr '\n' ' '; echo
+              head -c 700 "$tmp"
+              echo
             fi
             rm -f "$tmp"
           }
 
-          probe "Food Station REST root" "https://foodstation.id/wp-json/"
-          probe "Food Station products" "https://foodstation.id/wp-json/wc/store/v1/products?per_page=10"
-          probe "Food Station posts" "https://foodstation.id/wp-json/wp/v2/posts?per_page=10&_fields=id,date,link,title,excerpt"
-          probe "KAI corporate API root" "https://api.kai.id/msvc-webcorp"
-          probe "KAI corporate API slash" "https://api.kai.id/msvc-webcorp/"
-
-          echo "===== Food Station interesting routes ====="
-          curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0" -sS "https://foodstation.id/wp-json/" |
-            jq -r '.routes|keys[]' | grep -Ei '(product|stock|price|harga|beras|pangan|wc/store)' | head -n 120 || true
-
-          echo "===== KAI route discovery from article page ====="
-          work=$(mktemp -d)
-          curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0" -sS             "https://www.kai.id/publikasi/artikel-berita" -o "$work/page.html"
-          grep -Eo '/_next/static/chunks/[^" '\''<>]+\.js' "$work/page.html" | sort -u > "$work/scripts.txt"
-          : > "$work/all.js"
-          while read -r p; do
-            curl -L --connect-timeout 6 --max-time 20 -A "Mozilla/5.0" -sS "https://www.kai.id$p" >> "$work/all.js"
-            echo >> "$work/all.js"
-          done < "$work/scripts.txt"
-          echo "-- contexts --"
-          grep -Eo '.{0,180}(api\.kai\.id|msvc-webcorp|artikel-berita|siaran-pers|publikasi).{0,360}' "$work/all.js" | head -n 220 || true
-          echo "-- likely path strings --"
-          grep -Eo '["'\''][/A-Za-z0-9_.?=&{}:-]{3,160}["'\'']' "$work/all.js" |
-            grep -Ei '(artikel|berita|press|siaran|publication|publikasi|news|media|article)' |
-            sort -u | head -n 200 || true
+          probe "PLN WP REST root" "https://web.pln.co.id/wp-json/"
+          probe "PLN public posts" "https://web.pln.co.id/wp-json/wp/v2/posts?per_page=10&_fields=id,date,modified,link,title,excerpt"
+          probe "PLN media" "https://web.pln.co.id/wp-json/wp/v2/media?per_page=5&_fields=id,date,link,slug"
+          probe "ASDP WP REST root" "https://www.asdp.id/wp-json/"
+          probe "Pelindo WP REST root" "https://pelindo.co.id/wp-json/"
