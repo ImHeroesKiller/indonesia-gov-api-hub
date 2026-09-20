@@ -12,45 +12,51 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Discover ASDP KAI LRT public JSON calls
+      - name: Probe official endpoints
         shell: bash
         run: |
           set +e
-          work=$(mktemp -d)
 
-          inspect () {
+          probe () {
             name="$1"
             url="$2"
             echo "===== $name ====="
-            out="$3"
-            curl -L --connect-timeout 8 --max-time 25 -A "Mozilla/5.0 NusaData-Probe" -sS "$url" -o "$out"
-            echo "size=$(wc -c < "$out" 2>/dev/null)"
+            tmp=$(mktemp)
+            code=$(curl -L --retry 1 --connect-timeout 10 --max-time 25               -A "Mozilla/5.0 NusaData-Probe/1.0"               -H "Accept: application/json"               -sS -w "%{http_code}" -o "$tmp" "$url")
+            ct=$(file -b --mime-type "$tmp" 2>/dev/null)
+            echo "HTTP=$code MIME=$ct BYTES=$(wc -c < "$tmp")"
+            if jq -e . "$tmp" >/dev/null 2>&1; then
+              echo "JSON=valid"
+              jq -c 'if type=="object" then keys elif type=="array" then {"type":"array","length":length} else type end' "$tmp" | head -c 1200
+              echo
+            else
+              echo "JSON=invalid"
+              head -c 300 "$tmp" | tr '\n' ' '
+              echo
+            fi
+            rm -f "$tmp"
           }
 
-          inspect "ASDP commercial routes" "https://www.asdp.id/peta-lintasan-komersil" "$work/asdp.html"
-          echo "-- ASDP URL refs --"
-          grep -Eo 'https?://[^"'\'' <>()]+' "$work/asdp.html" | grep -Ei '(api|json|ajax|route|rute|lintasan|schedule|jadwal)' | sort -u | head -n 120 || true
-          echo "-- ASDP ajax/fetch contexts --"
-          grep -Eo '.{0,180}(fetch\(|axios|\$\.ajax|ajax\(|url[[:space:]]*:).{0,300}' "$work/asdp.html" | head -n 120 || true
-          echo "-- ASDP scripts --"
-          grep -Eo '<script[^>]+src=["'\''][^"'\'']+' "$work/asdp.html" | sed -E 's/.*src=["'\'']//' | head -n 40 || true
-
-          inspect "KAI homepage" "https://www.kai.id/" "$work/kai.html"
-          grep -Eo '/_next/static/chunks/[^"'\'' ]+\.js' "$work/kai.html" | sort -u | head -n 35 > "$work/kai-scripts.txt"
-          : > "$work/kai.js"
-          while read -r p; do
-            curl -L --connect-timeout 5 --max-time 10 -A "Mozilla/5.0" -sS "https://www.kai.id$p" >> "$work/kai.js"
-            echo >> "$work/kai.js"
-          done < "$work/kai-scripts.txt"
-          echo "-- KAI likely API contexts --"
-          grep -Eo '.{0,160}(hello-bar|publikasi|artikel|berita|media|msvc-webcorp).{0,280}' "$work/kai.js" | grep -Ei '(api|fetch|axios|get\(|post\()' | head -n 100 || true
-          echo "-- KAI URL/string fragments --"
-          strings "$work/kai.js" | grep -Eo '["'\''][A-Za-z0-9_./?=&:{}-]{4,}["'\'']' | grep -Ei '(hello|artikel|berita|publikasi|news|media|api)' | sort -u | head -n 120 || true
-
-          inspect "LRT Jakarta" "https://www.lrtjakarta.co.id/" "$work/lrt.html"
-          echo "-- LRT API refs --"
-          grep -Eo 'https?://[^"'\'' <>()]+' "$work/lrt.html" | grep -Ei '(api|json|ajax|station|stasiun|schedule|jadwal)' | sort -u | head -n 100 || true
-          echo "-- LRT ajax/fetch contexts --"
-          grep -Eo '.{0,180}(fetch\(|axios|\$\.ajax|ajax\(|url[[:space:]]*:).{0,300}' "$work/lrt.html" | head -n 100 || true
-          echo "-- LRT scripts --"
-          grep -Eo '<script[^>]+src=["'\''][^"'\'']+' "$work/lrt.html" | sed -E 's/.*src=["'\'']//' | head -n 40 || true
+          probe "KAI Stations" "https://booking.kai.id/api/stations2"
+          probe "MRT Jakarta JSONAPI root" "https://jakartamrt.co.id/jsonapi"
+          probe "MRT Jakarta Drupal nodes" "https://jakartamrt.co.id/jsonapi/node"
+          probe "LRT Jakarta WP REST" "https://lrtjakarta.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "PAM Jaya WP REST" "https://pamjaya.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "Pasar Jaya WP REST" "https://pasarjaya.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "Bank DKI WP REST" "https://bankdki.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "Jakpro WP REST" "https://jakpro.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "Food Station WP REST" "https://foodstation.id/wp-json/wp/v2/posts?per_page=3"
+          probe "Jaya Ancol WP REST" "https://www.ancol.com/wp-json/wp/v2/posts?per_page=3"
+          probe "KAI corporate WP REST" "https://www.kai.id/wp-json/wp/v2/posts?per_page=3"
+          probe "KAI Commuter WP REST" "https://commuterline.id/wp-json/wp/v2/posts?per_page=3"
+          probe "PELNI WP REST" "https://www.pelni.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "PLN WP REST" "https://web.pln.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "Pertamina WP REST" "https://www.pertamina.com/wp-json/wp/v2/posts?per_page=3"
+          probe "Pelindo WP REST" "https://pelindo.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "Jasa Marga WP REST" "https://www.jasamarga.com/wp-json/wp/v2/posts?per_page=3"
+          probe "Telkom Indonesia WP REST" "https://www.telkom.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "InJourney Airports WP REST" "https://injourneyairports.id/wp-json/wp/v2/posts?per_page=3"
+          probe "Bank Mandiri WP REST" "https://www.bankmandiri.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "BRI WP REST" "https://bri.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "BNI WP REST" "https://www.bni.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "BTN WP REST" "https://www.btn.co.id/wp-json/wp/v2/posts?per_page=3"
