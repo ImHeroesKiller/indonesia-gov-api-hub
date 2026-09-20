@@ -137,6 +137,16 @@
         </article>
       </section>
 
+      <section class="panel dashboard-panel domain-intelligence-panel">
+        <div class="section-head">
+          <div><span class="kicker">DOMAIN INTELLIGENCE</span><h2>Cakupan data lintas sektor</h2></div>
+          <button class="text-button" data-route="data">Eksplor domain →</button>
+        </div>
+        <p class="panel-description">Gabungan data operasional langsung dan katalog tematik dari REST API pemerintah yang telah tervalidasi.</p>
+        <div id="dashboardOperationalDomains" class="operational-domain-grid"></div>
+        <div id="dashboardDomainGrid" class="domain-grid"></div>
+      </section>
+
       <section class="dashboard-two-column">
         <article class="panel dashboard-panel">
           <div class="section-head">
@@ -254,6 +264,22 @@
         </div>
         <div id="catalogMeta" class="result-meta"></div>
         <div id="catalogGrid" class="dataset-grid"></div>
+      </section>
+
+      <section class="panel section-panel">
+        <div class="section-head">
+          <div><span class="kicker">MULTI-DOMAIN PUBLIC REST</span><h2>Domain Explorer</h2></div>
+          <span class="status-chip">VERIFIED</span>
+        </div>
+        <p class="panel-description">Transportasi, infrastruktur, tata ruang, energi/migas, pendidikan, kesehatan, ekonomi, lingkungan, pertanian, demografi, sosial, ketenagakerjaan, dan keuangan.</p>
+        <div id="domainOperationalGrid" class="operational-domain-grid detailed"></div>
+        <div id="domainExplorerGrid" class="domain-grid detailed"></div>
+        <div class="enterprise-block">
+          <div class="section-head compact">
+            <div><span class="kicker">LATEST BY DOMAIN</span><h3>Dataset tematik terbaru</h3></div>
+          </div>
+          <div id="domainLatestFeed" class="dashboard-feed"></div>
+        </div>
       </section>
 
       <section class="panel section-panel">
