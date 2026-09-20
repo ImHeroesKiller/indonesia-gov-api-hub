@@ -11,7 +11,7 @@
       "name": "Kementerian Keuangan",
       "role": "Fiskal & APBN",
       "weight": 15,
-      "status": "probing",
+      "status": "non_rest_public_data",
       "official_url": "https://data-apbn.kemenkeu.go.id/",
       "target_data": [
         "realisasi APBN",
@@ -20,14 +20,15 @@
         "penerimaan negara",
         "transfer ke daerah"
       ],
-      "investment_use": "government demand, fiscal impulse, public capex"
+      "investment_use": "government demand, fiscal impulse, public capex",
+      "note": "Portal Data APBN menyediakan open data publik, namun endpoint REST/JSON no-auth yang stabil belum tervalidasi. Belum masuk scoring."
     },
     {
       "id": "djp",
       "name": "Direktorat Jenderal Pajak",
       "role": "Pajak",
       "weight": 5,
-      "status": "probing",
+      "status": "non_rest_public_data",
       "official_url": "https://stats.pajak.go.id/",
       "target_data": [
         "penerimaan pajak",
@@ -35,7 +36,8 @@
         "ekonomi digital",
         "kurs pajak"
       ],
-      "investment_use": "tax base, sector activity, effective tax environment"
+      "investment_use": "tax base, sector activity, effective tax environment",
+      "note": "DJP menyediakan statistik publik, tetapi saat ini publikasinya dominan halaman/file dan belum ada REST/JSON no-auth yang tervalidasi untuk model."
     },
     {
       "id": "djbc",
@@ -108,7 +110,7 @@
       "name": "Kementerian Perdagangan",
       "role": "Perdagangan",
       "weight": 15,
-      "status": "probing",
+      "status": "access_request",
       "official_url": "https://satudata.kemendag.go.id/",
       "target_data": [
         "ekspor",
@@ -118,7 +120,8 @@
         "PMA",
         "PMDN"
       ],
-      "investment_use": "market momentum, trade exposure, commodity demand"
+      "investment_use": "market momentum, trade exposure, commodity demand",
+      "note": "Data perdagangan portal bersifat publik, tetapi akses API khusus disebut memerlukan permohonan/persetujuan. Tidak dipakai sampai ada endpoint REST no-auth yang eligible."
     },
     {
       "id": "kemenperin",
