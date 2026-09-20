@@ -36,6 +36,42 @@
       "description": "Data gempa terbaru, M5+, dan gempa dirasakan dalam format JSON publik tanpa autentikasi.",
       "portalUrl": "https://data.bmkg.go.id/gempabumi/",
       "apiUrl": "https://data.bmkg.go.id/DataMKG/TEWS/"
+    },
+    {
+      "id": "big-admin-boundaries",
+      "name": "BIG Batas Wilayah Administrasi",
+      "agency": "Badan Informasi Geospasial",
+      "level": "pusat",
+      "type": "ArcGIS REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "description": "Data geospasial batas desa/kelurahan melalui ArcGIS REST query publik tanpa autentikasi.",
+      "portalUrl": "https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/Administrasi_AR_KelDesa_10K/MapServer",
+      "apiUrl": "https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/Administrasi_AR_KelDesa_10K/MapServer/0/query"
+    },
+    {
+      "id": "banten-ckan",
+      "name": "Satu Data Provinsi Banten",
+      "agency": "Pemerintah Provinsi Banten",
+      "level": "daerah",
+      "type": "CKAN REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "description": "Katalog dataset publik Pemerintah Provinsi Banten melalui CKAN Action API tanpa autentikasi untuk operasi baca.",
+      "portalUrl": "https://data.bantenprov.go.id/",
+      "apiUrl": "https://data.bantenprov.go.id/api/3/action/package_search"
+    },
+    {
+      "id": "grobogan-ckan",
+      "name": "Open Data Kabupaten Grobogan",
+      "agency": "Pemerintah Kabupaten Grobogan",
+      "level": "daerah",
+      "type": "CKAN REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "description": "Katalog dataset publik Kabupaten Grobogan melalui CKAN Action API tanpa autentikasi.",
+      "portalUrl": "https://opendata.grobogan.go.id/",
+      "apiUrl": "https://opendata.grobogan.go.id/api/3/action/package_search"
     }
   ]
 }
