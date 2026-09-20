@@ -72,6 +72,45 @@
       "description": "Katalog dataset publik Kabupaten Grobogan melalui CKAN Action API tanpa autentikasi.",
       "portalUrl": "https://opendata.grobogan.go.id/",
       "apiUrl": "https://opendata.grobogan.go.id/api/3/action/package_search"
+    },
+    {
+      "id": "foodstation-store",
+      "name": "Food Station Produk Pangan",
+      "agency": "PT Food Station Tjipinang Jaya (Perseroda)",
+      "ownership": "BUMD",
+      "level": "BUMD DKI Jakarta",
+      "type": "WooCommerce Store REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "description": "Katalog produk pangan, harga, kategori dan status stok melalui REST API resmi Food Station tanpa autentikasi.",
+      "portalUrl": "https://foodstation.id/shop/",
+      "apiUrl": "https://foodstation.id/wp-json/wc/store/products"
+    },
+    {
+      "id": "pamjaya-complaints",
+      "name": "PAM JAYA Keluhan per Kelurahan",
+      "agency": "Perumda Air Minum Jaya",
+      "ownership": "BUMD",
+      "level": "BUMD DKI Jakarta",
+      "type": "ArcGIS REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "description": "Data agregat keluhan pelanggan per kelurahan melalui ArcGIS REST resmi PAM JAYA tanpa menampilkan data pelanggan individual.",
+      "portalUrl": "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer",
+      "apiUrl": "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer/3/query"
+    },
+    {
+      "id": "waskita-posts",
+      "name": "Waskita Karya Publikasi",
+      "agency": "PT Waskita Karya (Persero) Tbk",
+      "ownership": "BUMN",
+      "level": "BUMN",
+      "type": "WordPress REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "description": "Publikasi korporasi terbaru dari REST API resmi Waskita Karya tanpa autentikasi.",
+      "portalUrl": "https://www.waskita.co.id/",
+      "apiUrl": "https://www.waskita.co.id/wp-json/wp/v2/posts"
     }
   ]
 }
