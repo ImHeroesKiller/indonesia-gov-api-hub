@@ -220,6 +220,98 @@
       "description": "Layer publik data migas ESDM, termasuk data sumur dan Wilayah Kerja Migas 2026 melalui MapServer REST tanpa autentikasi.",
       "portalUrl": "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2",
       "apiUrl": "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2"
+    },
+    {
+      "id": "aceh-ckan",
+      "name": "OpenData Aceh",
+      "agency": "Pemerintah Aceh",
+      "level": "provinsi",
+      "type": "CKAN REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "domains": [
+        "education",
+        "health",
+        "economy",
+        "environment",
+        "agriculture",
+        "demography",
+        "social",
+        "employment",
+        "finance"
+      ],
+      "description": "Katalog dan DataStore publik Pemerintah Aceh melalui CKAN REST tanpa autentikasi.",
+      "portalUrl": "https://data.acehprov.go.id/",
+      "apiUrl": "https://data.acehprov.go.id/id/api/3/action/package_search"
+    },
+    {
+      "id": "sumbar-ckan",
+      "name": "Satu Data Sumatera Barat",
+      "agency": "Pemerintah Provinsi Sumatera Barat",
+      "level": "provinsi",
+      "type": "CKAN REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "domains": [
+        "education",
+        "health",
+        "economy",
+        "environment",
+        "agriculture",
+        "demography",
+        "social",
+        "employment",
+        "finance"
+      ],
+      "description": "Katalog data publik Sumatera Barat melalui CKAN REST tanpa autentikasi.",
+      "portalUrl": "https://data.sumbarprov.go.id/",
+      "apiUrl": "https://data.sumbarprov.go.id/api/3/action/package_search"
+    },
+    {
+      "id": "sumsel-ckan",
+      "name": "Open Data Sumatera Selatan",
+      "agency": "Pemerintah Provinsi Sumatera Selatan",
+      "level": "provinsi",
+      "type": "CKAN REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "domains": [
+        "education",
+        "health",
+        "economy",
+        "environment",
+        "agriculture",
+        "demography",
+        "social",
+        "employment",
+        "finance"
+      ],
+      "description": "Katalog data publik Sumatera Selatan melalui CKAN REST tanpa autentikasi.",
+      "portalUrl": "https://opendata.sumselprov.go.id/",
+      "apiUrl": "https://opendata.sumselprov.go.id/api/3/action/package_search"
+    },
+    {
+      "id": "jateng-ckan",
+      "name": "Open Data Jawa Tengah",
+      "agency": "Pemerintah Provinsi Jawa Tengah",
+      "level": "provinsi",
+      "type": "CKAN REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "domains": [
+        "education",
+        "health",
+        "economy",
+        "environment",
+        "agriculture",
+        "demography",
+        "social",
+        "employment",
+        "finance"
+      ],
+      "description": "Katalog dan DataStore publik Jawa Tengah melalui CKAN REST tanpa autentikasi.",
+      "portalUrl": "https://data.jatengprov.go.id/",
+      "apiUrl": "https://data.jatengprov.go.id/api/3/action/package_search"
     }
   ]
 }
