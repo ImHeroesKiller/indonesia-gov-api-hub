@@ -1,13 +1,14 @@
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 
-const state={sources:{institutions:[]},model:{factors:[]},summary:{},industry:{themes:{},items:[]},energy:{},status:{}};
+const state={sources:{institutions:[]},model:{factors:[]},summary:{},industry:{themes:{},items:[]},energy:{},status:{},regional:{regions:[]}};
 const LIVE={
   sources:'./data/investment-sources.json',
   model:'./data/investment-model.json',
   summary:'./live/investment-summary.json',
   industry:'./live/investment-industry.json',
   energy:'./live/investment-energy.json',
-  status:'./live/investment-status.json'
+  status:'./live/investment-status.json',
+  regional:'./live/regional-summary.json'
 };
 const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
 const fmt=v=>new Intl.NumberFormat('id-ID').format(Number(v)||0);
@@ -132,17 +133,49 @@ function renderEnergy(){
   $('#workingAreaList').innerHTML=(state.energy.working_areas||[]).map(x=>'<article class="investment-detail-row">'+compactObject(x)+'</article>').join('')||'<div class="empty-inline">Detail WK belum tersedia.</div>';
   $('#wellSampleList').innerHTML=(state.energy.well_samples||[]).map(x=>'<article class="investment-detail-row">'+compactObject(x)+'</article>').join('')||'<div class="empty-inline">Sample sumur belum tersedia.</div>';
 }
+function regionDatasetUrl(key,name){
+  const bases={
+    aceh:'https://data.acehprov.go.id/id/dataset/',
+    sumbar:'https://data.sumbarprov.go.id/dataset/',
+    sumsel:'https://opendata.sumselprov.go.id/dataset/',
+    banten:'https://data.bantenprov.go.id/dataset/',
+    jateng:'https://data.jatengprov.go.id/dataset/',
+    kaltim:'https://data.kaltimprov.go.id/dataset/',
+    grobogan:'https://opendata.grobogan.go.id/dataset/'
+  };
+  return (bases[key]||'#')+(name||'');
+}
+function renderRegionalInvestment(){
+  const all=state.regional?.regions||[];
+  const provinces=all.filter(x=>x.level==='provinsi'&&x.available!==false);
+  const total=provinces.reduce((s,x)=>s+(Number(x.count)||0),0);
+  const pc=$('#regionalProvinceCount'),dt=$('#regionalDatasetTotal'),grid=$('#regionalInvestmentGrid');
+  if(pc)pc.textContent=fmt(provinces.length)+'/38';
+  if(dt)dt.textContent=fmt(total);
+  if(grid)grid.innerHTML=provinces.map(r=>{
+    const latest=[...(r.items||[])].sort((x,y)=>new Date(y.metadata_modified||0)-new Date(x.metadata_modified||0))[0];
+    const href=latest?regionDatasetUrl(r.key,latest.name):'#';
+    return '<article class="regional-coverage-card">'+
+      '<div><span>'+esc(r.name)+'</span><strong>'+fmt(r.count)+'</strong></div>'+
+      '<small>PROVINSI · VERIFIED REST</small>'+
+      '<p>'+esc(latest?.title||'Katalog open data aktif')+'</p>'+
+      (href!=='#'?'<a href="'+esc(href)+'" target="_blank" rel="noopener">Dataset terbaru ↗</a>':'')+
+    '</article>';
+  }).join('')||'<div class="empty-inline">Coverage provinsi belum tersedia.</div>';
+}
+
 function renderAll(){
-  renderInstitutionGroups();renderCoverage();renderFactors();renderSourceReadiness();renderIndustry();renderEnergy();
+  renderInstitutionGroups();renderCoverage();renderFactors();renderSourceReadiness();renderIndustry();renderEnergy();renderRegionalInvestment();
 }
 async function loadAll(){
-  const tasks=await Promise.allSettled([json(LIVE.sources),json(LIVE.model),json(LIVE.summary),json(LIVE.industry),json(LIVE.energy),json(LIVE.status)]);
+  const tasks=await Promise.allSettled([json(LIVE.sources),json(LIVE.model),json(LIVE.summary),json(LIVE.industry),json(LIVE.energy),json(LIVE.status),json(LIVE.regional)]);
   if(tasks[0].status==='fulfilled')state.sources=tasks[0].value;
   if(tasks[1].status==='fulfilled')state.model=tasks[1].value;
   if(tasks[2].status==='fulfilled')state.summary=tasks[2].value;
   if(tasks[3].status==='fulfilled')state.industry=tasks[3].value;
   if(tasks[4].status==='fulfilled')state.energy=tasks[4].value;
   if(tasks[5].status==='fulfilled')state.status=tasks[5].value;
+  if(tasks[6].status==='fulfilled')state.regional=tasks[6].value;
   renderAll();
 }
 async function reloadAll(){await loadAll();toast('Investment data diperbarui')}
