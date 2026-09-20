@@ -1,4 +1,4 @@
-const CACHE='nusadata-v9-statistical-indicators';
+const CACHE='nusadata-v9-direct-statistics';
 
 const CORE=[
   './',
