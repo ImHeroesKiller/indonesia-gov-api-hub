@@ -97,6 +97,13 @@
           <p id="groboganLatest">Memuat dataset terbaru…</p>
           <button class="text-button" data-route="data">Lihat dataset →</button>
         </article>
+        <article class="panel summary-card">
+          <span class="kicker">BUMN & BUMD</span>
+          <strong id="enterpriseSummaryCount">—</strong>
+          <h3>Sumber korporasi publik</h3>
+          <p>REST resmi perusahaan milik negara/daerah yang lolos validasi tanpa autentikasi.</p>
+          <button class="text-button" data-route="data">Lihat data →</button>
+        </article>
       </section>
 
       <section class="panel section-panel">
@@ -175,7 +182,41 @@
         </div>
         <div id="catalogMeta" class="result-meta"></div>
         <div id="catalogGrid" class="dataset-grid"></div>
+        <section class="panel section-panel">
+        <div class="section-head">
+          <div><span class="kicker">BUMN & BUMD · VERIFIED PUBLIC REST</span><h2>Data Perusahaan Publik</h2></div>
+          <span class="status-chip">NO AUTH</span>
+        </div>
+
+        <div class="enterprise-kpis">
+          <div><span>Food Station</span><strong id="foodstationCount">—</strong><small>produk publik</small></div>
+          <div><span>PAM JAYA</span><strong id="pamComplaintTotal">—</strong><small>keluhan agregat</small></div>
+          <div><span>Waskita Karya</span><strong id="waskitaCount">—</strong><small>publikasi terbaru</small></div>
+        </div>
+
+        <div class="enterprise-block">
+          <div class="section-head compact">
+            <div><span class="kicker">BUMD · FOOD STATION</span><h3>Katalog Produk Pangan</h3></div>
+          </div>
+          <div id="foodstationProducts" class="product-data-grid"></div>
+        </div>
+
+        <div class="enterprise-block">
+          <div class="section-head compact">
+            <div><span class="kicker">BUMD · PAM JAYA</span><h3>Keluhan per Kelurahan</h3></div>
+            <small class="muted-note">Agregat saja · tanpa data pelanggan individual</small>
+          </div>
+          <div id="pamjayaTop" class="region-list"></div>
+        </div>
+
+        <div class="enterprise-block">
+          <div class="section-head compact">
+            <div><span class="kicker">BUMN · WASKITA KARYA</span><h3>Publikasi Terbaru</h3></div>
+          </div>
+          <div id="waskitaPosts" class="news-data-list"></div>
+        </div>
       </section>
+    </section>
     </section>
 
     <section class="view" data-view="sources">
