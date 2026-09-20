@@ -29,7 +29,7 @@ jobs:
       - name: Validate frontend
         run: |
           node --check app.js
-          node -e "const x=JSON.parse(require('fs').readFileSync('data/apis.json','utf8')); if(!x.policy?.public_rest_only) process.exit(1); if(x.sources.some(s=>s.auth!=='none')) process.exit(1); console.log('Public REST allowlist OK')"
+          node -e "const x=JSON.parse(require('fs').readFileSync('data/apis.json','utf8')); if(!x.policy?.public_rest_only) process.exit(1); if(x.sources.some(s=>s.auth!=='none')) process.exit(1); console.log('Public REST allowlist OK:', x.sources.length, 'sources')"
 
       - name: Fetch verified public REST data
         shell: bash
@@ -40,10 +40,11 @@ jobs:
           curl_json () {
             url="$1"
             out="$2"
-            curl -fL --retry 2 --retry-delay 2 --connect-timeout 12 --max-time 35               -A "NusaData/1.0 (+https://github.com/ImHeroesKiller/indonesia-gov-api-hub)"               -H "Accept: application/json"               -sS "$url" -o "$out"
+            curl -fL --retry 2 --retry-delay 2 --connect-timeout 12 --max-time 40               -A "NusaData/1.0 (+https://github.com/ImHeroesKiller/indonesia-gov-api-hub)"               -H "Accept: application/json"               -sS "$url" -o "$out"
             jq -e . "$out" >/dev/null
           }
 
+          # BMKG
           curl_json             "https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=31.71.03.1001"             "live/weather-kemayoran.json"
 
           curl_json             "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json"             "live/earthquake-latest.json"
@@ -52,19 +53,39 @@ jobs:
 
           curl_json             "https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json"             "live/earthquake-felt.json"
 
+          # BIG
+          curl_json             "https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/Administrasi_AR_KelDesa_10K/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json"             "live/big-village-count.json"
+
+          curl_json             "https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/Administrasi_AR_KelDesa_10K/MapServer/0/query?where=1%3D1&outFields=NAMOBJ%2CWADMKD%2CWADMKC%2CWADMKK%2CWADMPR%2CKDEPUM&returnGeometry=false&resultRecordCount=12&orderByFields=OBJECTID&f=json"             "live/big-village-sample.json"
+
+          # CKAN public read APIs
+          curl_json             "https://data.bantenprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc"             "live/banten-datasets.json"
+
+          curl_json             "https://opendata.grobogan.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc"             "live/grobogan-datasets.json"
+
+          # Strict validation: deploy only valid no-auth public data.
           jq -e '(.data|type=="array") and (.data|length>0)' live/weather-kemayoran.json >/dev/null
           jq -e '.Infogempa.gempa != null' live/earthquake-latest.json >/dev/null
           jq -e '(.Infogempa.gempa|type=="array")' live/earthquake-m5.json >/dev/null
           jq -e '(.Infogempa.gempa|type=="array")' live/earthquake-felt.json >/dev/null
 
+          jq -e '.count > 0' live/big-village-count.json >/dev/null
+          jq -e '(.features|type=="array") and (.features|length>0)' live/big-village-sample.json >/dev/null
+
+          jq -e '.success == true and (.result.results|type=="array")' live/banten-datasets.json >/dev/null
+          jq -e '.success == true and (.result.results|type=="array")' live/grobogan-datasets.json >/dev/null
+
           cat > live/status.json <<EOF
           {
             "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "policy": "public-rest-no-auth-only",
-            "weather_available": true,
-            "earthquake_latest_available": true,
-            "earthquake_m5_available": true,
-            "earthquake_felt_available": true
+            "sources": {
+              "bmkg_weather": true,
+              "bmkg_earthquake": true,
+              "big_admin_boundaries": true,
+              "banten_ckan": true,
+              "grobogan_ckan": true
+            }
           }
           EOF
 
