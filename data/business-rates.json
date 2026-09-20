@@ -247,5 +247,27 @@
       "name": "BPJS Ketenagakerjaan — Batas Upah JP 2026 (efektif Maret 2026)",
       "url": "https://494075.fs1.hubspotusercontent-na1.net/hubfs/494075/compliance-portal/notification-number-b1226022026.pdf"
     }
-  ]
+  ],
+  "payroll_table_default": {
+    "workdays": 22,
+    "jkk_risk": "very_low",
+    "include_thr": true,
+    "rows": [
+      {
+        "id": "crew",
+        "position": "Crew",
+        "headcount": 30,
+        "tenant_rate_daily": 230000,
+        "worker_cost_daily": 180000
+      },
+      {
+        "id": "tukang",
+        "position": "Tukang",
+        "headcount": 30,
+        "tenant_rate_daily": 260000,
+        "worker_cost_daily": 200000
+      }
+    ],
+    "note": "Default structure adapted from the uploaded Morowali 60 HC financial model. All values remain editable in the calculator."
+  }
 }
