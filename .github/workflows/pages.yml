@@ -91,6 +91,18 @@ jobs:
           echo "Snapshot status:"
           cat live/status.json
 
+      - name: Verify BMKG weather snapshot
+        run: jq -e '(.unavailable // false) == false and (.data|type=="array")' live/weather-kemayoran.json
+
+      - name: Verify BMKG latest earthquake snapshot
+        run: jq -e '(.unavailable // false) == false and (.Infogempa.gempa != null)' live/earthquake-latest.json
+
+      - name: Verify BMKG M5 snapshot
+        run: jq -e '(.unavailable // false) == false and (.Infogempa.gempa|type=="array")' live/earthquake-m5.json
+
+      - name: Verify BMKG felt snapshot
+        run: jq -e '(.unavailable // false) == false and (.Infogempa.gempa|type=="array")' live/earthquake-felt.json
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
