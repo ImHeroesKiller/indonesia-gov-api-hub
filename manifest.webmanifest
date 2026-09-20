@@ -1,12 +1,12 @@
 {
-  "name": "NusaAPI — Indonesia Government Data Hub",
-  "short_name": "NusaAPI",
-  "description": "Katalog dan explorer terpadu API serta portal data pemerintah Indonesia.",
+  "name": "NusaData — Portal Data Pemerintah Indonesia",
+  "short_name": "NusaData",
+  "description": "Portal terpadu untuk melihat data publik pemerintah Indonesia secara langsung.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f6f7fb",
-  "theme_color": "#d92d20",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0d1728",
   "icons": [
     {"src":"./assets/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
   ]
