@@ -12,27 +12,35 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Find direct public datastore resources
+      - name: Inspect direct datastore records
         shell: bash
         run: |
           set -e
 
-          inspect () {
-            base="$1"; label="$2"; query="$3"
-            echo "===== $label :: $query ====="
-            tmp=$(mktemp)
-            curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -sS               "$base/api/3/action/package_search?q=$query&rows=8" -o "$tmp"
-            jq -e '.success==true' "$tmp" >/dev/null
-            jq -c '.result.results[] | {
-              name,title,modified:.metadata_modified,
-              resources:[.resources[]? | select(.datastore_active==true or (.format|ascii_downcase)=="json" or (.format|ascii_downcase)=="csv") | {id,name,format,datastore_active,url}]
-            } | select(.resources|length>0)' "$tmp" | head -n 24
+          ds () {
+            label="$1"; id="$2"
+            echo "===== $label ====="
+            curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -sS               "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=$id&limit=8" |
+              jq -c '{success,result:{total:.result.total,fields:(.result.fields|map(.id)),records:.result.records}}'
           }
 
-          for q in inflasi pengangguran kemiskinan apbd sekolah puskesmas sampah "produksi%20padi"; do
-            inspect "https://data.bantenprov.go.id" "BANTEN" "$q"
-          done
+          find_ds () {
+            label="$1"; query="$2"
+            echo "===== DISCOVER $label :: $query ====="
+            curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -sS               "https://data.bantenprov.go.id/api/3/action/package_search?q=$query&rows=12" |
+              jq -c '.result.results[] | {
+                name,title,
+                ds:[.resources[]? | select(.datastore_active==true) | {id,name,format}]
+              } | select(.ds|length>0)' | head -n 20
+          }
 
-          for q in inflasi pengangguran kemiskinan apbd sekolah puskesmas sampah "produksi%20padi"; do
-            inspect "https://opendata.grobogan.go.id" "GROBOGAN" "$q"
-          done
+          ds "UNEMPLOYMENT" "6e533cef-056d-4dbc-a689-8f388d6cb6c7"
+          ds "POVERTY" "cabba131-d45d-4920-b224-2f0ade451466"
+          ds "APBD" "41209471-f0f0-4af4-b29a-660dde6bbd80"
+          ds "SCHOOL" "ec8cc1b4-9f87-46fd-98cb-d2aab92fb52a"
+          ds "WASTE" "143df65f-35ee-4419-91b6-b289e368a488"
+
+          find_ds "HEALTH" "jumlah%20puskesmas"
+          find_ds "AGRICULTURE" "padi"
+          find_ds "APBD NUMERIC" "realisasi%20pendapatan"
+          find_ds "ENVIRONMENT" "volume%20sampah"
