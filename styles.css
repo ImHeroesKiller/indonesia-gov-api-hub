@@ -482,3 +482,29 @@ html[data-theme=dark]{--bg:#07101d;--card:rgba(12,23,39,.9);--solid:#0e1a2b;--so
 @media(max-width:1180px){.business-kpis{grid-template-columns:repeat(3,1fr)}.wage-benchmark-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:900px){.business-hero{grid-template-columns:1fr;padding:28px}.ruleset-card{max-width:420px}.calculator-layout{grid-template-columns:1fr}.wage-benchmark-grid{grid-template-columns:repeat(2,1fr)}.rate-card-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:640px){.business-hero{padding:22px 18px}.business-hero h1{font-size:38px}.business-kpis{grid-template-columns:repeat(2,1fr)}.wage-benchmark-grid,.rate-card-grid{grid-template-columns:1fr}.source-card-simple{align-items:flex-start;flex-direction:column}}
+
+
+/* Project payroll profitability table */
+.payroll-table-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.payroll-table-controls label{display:grid;gap:7px;font-size:10px;font-weight:700}
+.payroll-table-controls select,.payroll-table-controls input[type="number"]{width:100%;border:1px solid var(--line);background:var(--solid);color:var(--text);border-radius:12px;padding:11px 12px;font:inherit}
+.payroll-table-panel{overflow:hidden}
+.table-scroll{overflow-x:auto;padding-bottom:4px}
+.business-calc-table{width:100%;min-width:1580px;border-collapse:separate;border-spacing:0}
+.business-calc-table th{position:sticky;top:0;background:var(--soft);color:var(--muted);font-size:8px;text-transform:uppercase;letter-spacing:.04em;text-align:left;padding:10px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+.business-calc-table td{padding:9px;border-bottom:1px solid var(--line);font-size:9px;vertical-align:middle;white-space:nowrap}
+.business-calc-table td.num,.business-calc-table th.num{text-align:right}
+.business-calc-table td.strong{font-weight:800}
+.business-calc-table td.positive{color:var(--ok);font-weight:800}
+.business-calc-table td.negative{color:var(--danger);font-weight:800}
+.table-input{width:118px;min-width:84px;border:1px solid var(--line);background:var(--solid);color:var(--text);border-radius:8px;padding:8px;font:inherit}
+td:first-child .table-input{width:110px}
+td:nth-child(2) .table-input{width:58px}
+.table-status{display:inline-flex;padding:5px 7px;border-radius:999px;font-size:8px;font-weight:800}
+.table-status.good{background:rgba(22,163,74,.1);color:#16a34a}
+.table-status.bad{background:rgba(220,38,38,.1);color:#dc2626}
+.table-status.neutral{background:var(--soft);color:var(--muted)}
+.total-row td{font-weight:800;background:var(--soft);border-top:1px solid var(--text)}
+.payroll-summary-kpis{grid-template-columns:repeat(6,1fr);margin-top:12px}
+@media(max-width:1100px){.payroll-table-controls{grid-template-columns:repeat(2,1fr)}.payroll-summary-kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.payroll-table-controls{grid-template-columns:1fr}.payroll-summary-kpis{grid-template-columns:repeat(2,1fr)}}
