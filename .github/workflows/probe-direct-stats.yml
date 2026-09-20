@@ -12,17 +12,9 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect remaining KPI resources
+      - name: Inspect hospital beds
         shell: bash
         run: |
           set -e
-          ds () {
-            label="$1"; id="$2"; limit="${3:-100}"
-            echo "===== $label ====="
-            curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -sS               "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=$id&limit=$limit" |
-              jq -c '{total:.result.total,fields:(.result.fields|map(.id)),records:.result.records}'
-          }
-          ds "IHK" "60a377b4-d6a0-401f-ad82-dd30e7780393" 500
-          ds "FOOD PRICE" "074e77b2-b549-4490-940e-dd16fdb159b5" 100
-          ds "HOSPITALS" "27b948ad-aee7-4e57-a7b4-d43636c014c5" 100
-          ds "AGRICULTURE" "e3548ec4-68b5-44fc-bd8c-fcf514c2007d" 500
+          curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30             -A "NusaData-Probe/1.0" -sS             "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=07164307-c64e-432a-aaac-d27b5196df22&limit=100" |
+            jq -c '{total:.result.total,fields:(.result.fields|map(.id)),records:.result.records}'
