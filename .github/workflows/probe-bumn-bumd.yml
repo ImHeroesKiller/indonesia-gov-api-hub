@@ -12,37 +12,54 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Discover public data endpoints
+      - name: Probe focused public endpoints
         shell: bash
         run: |
           set +e
           work=$(mktemp -d)
 
-          echo "===== KAI PUBLIC WEBSITE API DISCOVERY ====="
-          curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0" -sS https://www.kai.id/ -o "$work/kai.html"
-          grep -Eo '/_next/static/chunks/[^"'\'' ]+\.js' "$work/kai.html" | sort -u | head -n 60 > "$work/kai-scripts.txt"
-          while read -r p; do
-            curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0" -sS "https://www.kai.id$p" >> "$work/kai-js.txt"
-            echo >> "$work/kai-js.txt"
-          done < "$work/kai-scripts.txt"
-          echo "-- msvc-webcorp endpoint strings --"
-          grep -Eo 'https://api\.kai\.id/msvc-webcorp[^"'\'' <>()\\]+' "$work/kai-js.txt" | sed 's/\\$//' | sort -u | head -n 100 || true
-          echo "-- relative endpoint-like strings --"
-          grep -Eo '/msvc-webcorp/[A-Za-z0-9_/?=&.{}:-]+' "$work/kai-js.txt" | sort -u | head -n 100 || true
-          echo "-- article/news related context --"
-          grep -Eo '.{0,120}(artikel|berita|publication|publikasi|news).{0,180}' "$work/kai-js.txt" | grep -Ei '(api|msvc|fetch|axios)' | head -n 40 || true
+          probe () {
+            name="$1"
+            url="$2"
+            echo "===== $name ====="
+            tmp=$(mktemp)
+            code=$(curl -L --connect-timeout 8 --max-time 18 -A "NusaData-Probe/1.0" -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "$url")
+            echo "HTTP=$code"
+            if jq -e . "$tmp" >/dev/null 2>&1; then
+              echo "JSON=valid"
+              jq -c 'if type=="object" then keys else type end' "$tmp" | head -c 800
+              echo
+              jq -c '.' "$tmp" | head -c 1800
+              echo
+            else
+              echo "JSON=invalid"
+              head -c 400 "$tmp"
+              echo
+            fi
+            rm -f "$tmp"
+          }
 
-          echo "===== MRT PUBLIC WEBSITE JS DISCOVERY ====="
-          curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0" -sS https://jakartamrt.co.id/ -o "$work/mrt.html"
+          echo "===== KAI public site refs ====="
+          curl -L --connect-timeout 8 --max-time 18 -A "Mozilla/5.0" -sS https://www.kai.id/ -o "$work/kai.html"
+          grep -Eo 'https://api\.kai\.id/msvc-webcorp[^"'\'' <>()\\]+' "$work/kai.html" | sed 's/\\$//' | sort -u | head -n 40 || true
+
+          probe "KAI hello bar ID" "https://api.kai.id/msvc-webcorp/id/hello-bar"
+          probe "KAI hello bar default" "https://api.kai.id/msvc-webcorp/hello-bar"
+
+          # Candidate collection routes only if they respond as public JSON.
+          probe "KAI articles v2" "https://api.kai.id/msvc-webcorp/api/v2/articles"
+          probe "KAI article-news v2" "https://api.kai.id/msvc-webcorp/api/v2/article-news"
+          probe "KAI publications v2" "https://api.kai.id/msvc-webcorp/api/v2/publications"
+          probe "KAI news v2" "https://api.kai.id/msvc-webcorp/api/v2/news"
+
+          echo "===== MRT public bundle refs ====="
+          curl -L --connect-timeout 8 --max-time 18 -A "Mozilla/5.0" -sS https://jakartamrt.co.id/ -o "$work/mrt.html"
           mrtjs=$(grep -Eo '/assets/index-[^"'\'' ]+\.js' "$work/mrt.html" | head -n1)
           if [ -n "$mrtjs" ]; then
-            curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0" -sS "https://jakartamrt.co.id$mrtjs" -o "$work/mrt.js"
-            echo "-- API-like URLs --"
-            grep -Eo 'https?://[^"'\'' <>()]+' "$work/mrt.js" | grep -Ei '(api|json|graphql|rest)' | sort -u | head -n 60 || true
-            echo "-- fetch/axios contexts --"
-            grep -Eo '.{0,120}(fetch|axios|/api/).{0,180}' "$work/mrt.js" | head -n 50 || true
+            curl -L --connect-timeout 8 --max-time 18 -A "Mozilla/5.0" -sS "https://jakartamrt.co.id$mrtjs" -o "$work/mrt.js"
+            grep -Eo 'https?://[^"'\'' <>()]+' "$work/mrt.js" | grep -Ei '(api|json|graphql|rest)' | sort -u | head -n 40 || true
           fi
 
-          echo "===== TRANSJAKARTA PUBLIC ROUTE DISCOVERY ====="
-          curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0" -sS https://www.transjakarta.co.id/rute -o "$work/tj.html"
-          grep -Eo '.{0,120}(ajax|fetch|axios|/api/|route|rute).{0,220}' "$work/tj.html" | grep -Ei '(url|ajax|fetch|api)' | head -n 80 || true
+          echo "===== TransJakarta public route HTML refs ====="
+          curl -L --connect-timeout 8 --max-time 18 -A "Mozilla/5.0" -sS https://www.transjakarta.co.id/rute -o "$work/tj.html"
+          grep -Eo 'https?://[^"'\'' <>()]+' "$work/tj.html" | grep -Ei '(api|json|route|rute)' | sort -u | head -n 40 || true
