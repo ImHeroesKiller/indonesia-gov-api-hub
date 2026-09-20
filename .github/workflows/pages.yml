@@ -40,7 +40,7 @@ jobs:
             'dashboardQuakes','dashboardEnterpriseHighlights','dashboardDatasets',
             'dashboardEnterpriseFeed','dashboardSourceHealth','foodstationProducts',
             'pamjayaTop','waskitaPosts','sourceGrid','dashboardDomainGrid',
-            'dashboardOperationalDomains','domainExplorerGrid','domainOperationalGrid','indicatorGrid','dashboardDirectStats','directStatsDetail'
+            'dashboardOperationalDomains','domainExplorerGrid','domainOperationalGrid','indicatorGrid','dashboardDirectStats','directStatsDetail','regionalCoverage'
           ];
           const missing=required.filter(id=>!ids.includes(id));
           if(missing.length){console.error('Missing dashboard IDs:',missing);process.exit(1)}
