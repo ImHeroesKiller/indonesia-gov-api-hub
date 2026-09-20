@@ -1,13 +1,9 @@
-name: Deploy Investment Intelligence
+name: Deploy Business Cost & Compliance
 
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - ".github/workflows/probe-*.yml"
   workflow_dispatch:
-  schedule:
-    - cron: "0 */6 * * *"
 
 permissions:
   contents: read
@@ -15,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: nusadata-investment-pages
+  group: nusadata-business-cost-pages
   cancel-in-progress: true
 
 jobs:
@@ -24,13 +20,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate investment frontend
+      - name: Validate frontend and 2026 ruleset
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
           node --check app.js
-          jq -e '.policy.public_rest_only==true and .policy.investment_scope_only==true' data/investment-sources.json >/dev/null
-          jq -e '.min_coverage_for_score==0.70 and ([.factors[].weight]|add)==100' data/investment-model.json >/dev/null
+          jq -e '.scope=="business-cost-compliance" and .updated_at=="2026-09-21"' data/business-rates.json >/dev/null
+          jq -e '.tax.corporate.general_rate==0.22' data/business-rates.json >/dev/null
+          jq -e '.tax.corporate.section31e_reduced_rate==0.11' data/business-rates.json >/dev/null
+          jq -e '.tax.vat.non_luxury_effective_rate==0.11 and .tax.vat.luxury_effective_rate==0.12' data/business-rates.json >/dev/null
+          jq -e '.bpjs.health.employer_rate==0.04 and .bpjs.health.employee_rate==0.01 and .bpjs.health.wage_ceiling==12000000' data/business-rates.json >/dev/null
+          jq -e '.bpjs.employment.jht.employer_rate==0.037 and .bpjs.employment.jht.employee_rate==0.02' data/business-rates.json >/dev/null
+          jq -e '.bpjs.employment.jp.employer_rate==0.02 and .bpjs.employment.jp.employee_rate==0.01 and .bpjs.employment.jp.wage_ceiling_current>10000000' data/business-rates.json >/dev/null
+          jq -e '(.wages_2026|length)>=10 and all(.wages_2026[];.value>3000000)' data/business-rates.json >/dev/null
+
           node <<'NODE'
           const fs=require('fs');
           const html=fs.readFileSync('index.html','utf8');
@@ -38,111 +41,19 @@ jobs:
           const dup=ids.filter((x,i)=>ids.indexOf(x)!==i);
           if(dup.length){console.error('Duplicate IDs',[...new Set(dup)]);process.exit(1)}
           const required=[
-            'coveragePercent','coverageLabel','coverageMeter','snapshotTime',
-            'eligibleSources','industryDatasetCount','wellCount','workingAreaCount',
-            'modelStatus','scoreBadge','factorGrid','sourceCoverage',
-            'industryHighlights','energyHighlights','macroInstitutions',
-            'tradeInstitutions','industrialThemes','industrialFeed',
-            'energyWellCount','energyWKCount','workingAreaList','wellSampleList','sourceMatrix'
+            'rulesUpdated','overviewPayroll','overviewTax','wageBenchmarkGrid',
+            'regionSelect','sectoralWrap','useSectoral','salaryInput','minimumWageHint',
+            'headcountInput','jkkSelect','includeThr','wageCompliance','totalEmployerCost',
+            'totalEmployerCostPerEmployee','employerBreakdown','employerBpjsCards',
+            'employeeNetBeforeTax','employeeDeductions','entitySelect','revenueInput',
+            'profitInput','taxRuleHint','incomeTaxResult','incomeTaxMethod',
+            'incomeTaxEffective','incomeTaxMonthly','vatBaseInput','vatTypeSelect',
+            'vatResult','vatMethod','withholdingGrid','sourceList'
           ];
           const missing=required.filter(id=>!ids.includes(id));
           if(missing.length){console.error('Missing DOM contract',missing);process.exit(1)}
-          console.log('Investment dashboard contract OK:',required.length);
+          console.log('Business dashboard DOM contract OK:',required.length);
           NODE
-
-      - name: Fetch verified investment REST data
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p live tmp-invest
-
-          curl_json () {
-            url="$1"; out="$2"
-            curl -fL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 12 --max-time 60 \
-              -A "NusaData-Investment/1.0 (+https://github.com/ImHeroesKiller/indonesia-gov-api-hub)" \
-              -H "Accept: application/json" -sS "$url" -o "$out"
-            jq -e . "$out" >/dev/null
-          }
-
-          curl_json_optional () {
-            url="$1"; out="$2"
-            if curl -fL --retry 2 --retry-all-errors --retry-delay 2 --connect-timeout 8 --max-time 25 \
-              -A "NusaData-Investment/1.0 (+https://github.com/ImHeroesKiller/indonesia-gov-api-hub)" \
-              -H "Accept: application/json" -sS "$url" -o "$out" && jq -e . "$out" >/dev/null 2>&1; then
-              return 0
-            fi
-            return 1
-          }
-
-          # Kementerian Perindustrian
-          # Official CKAN REST is documented, but the host is currently not reliably
-          # reachable from deployment runners. Keep the gap explicit and non-blocking.
-          cat > live/investment-industry.json <<'EOF'
-          {
-            "available": false,
-            "reason": "Official Kemenperin CKAN REST is documented but currently unreachable from the deployment runner.",
-            "themes": {},
-            "items": []
-          }
-          EOF
-
-          # Kementerian ESDM — official ArcGIS REST
-          curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "tmp-invest/esdm-well-count.json"
-          curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/MapServer/0/query?where=1%3D1&returnIdsOnly=true&f=json" "tmp-invest/esdm-well-ids.json"
-          curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "tmp-invest/esdm-wk-count.json"
-          curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/MapServer/0/query?where=1%3D1&returnIdsOnly=true&f=json" "tmp-invest/esdm-wk-ids.json"
-
-          WELL_IDS=$(jq -r '.objectIds[:8]|join(",")' tmp-invest/esdm-well-ids.json)
-          WK_IDS=$(jq -r '.objectIds[:20]|join(",")' tmp-invest/esdm-wk-ids.json)
-
-          curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/MapServer/0/query?objectIds=$WELL_IDS&outFields=%2A&returnGeometry=false&f=json" "tmp-invest/esdm-well-sample.json"
-          curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/MapServer/0/query?objectIds=$WK_IDS&outFields=%2A&returnGeometry=false&f=json" "tmp-invest/esdm-wk-sample.json"
-
-          jq -e '.count>0' tmp-invest/esdm-well-count.json >/dev/null
-          jq -e '.count>0' tmp-invest/esdm-wk-count.json >/dev/null
-          jq -e '(.objectIds|type=="array") and (.objectIds|length>0)' tmp-invest/esdm-well-ids.json >/dev/null
-          jq -e '(.objectIds|type=="array") and (.objectIds|length>0)' tmp-invest/esdm-wk-ids.json >/dev/null
-          jq -e '(.features|type=="array") and (.features|length>0)' tmp-invest/esdm-well-sample.json >/dev/null
-          jq -e '(.features|type=="array") and (.features|length>0)' tmp-invest/esdm-wk-sample.json >/dev/null
-
-          jq -n \
-            --slurpfile wc tmp-invest/esdm-well-count.json \
-            --slurpfile ws tmp-invest/esdm-well-sample.json \
-            --slurpfile kc tmp-invest/esdm-wk-count.json \
-            --slurpfile ks tmp-invest/esdm-wk-sample.json \
-            '{
-              generated_at:(now|todateiso8601),
-              well_count:($wc[0].count//0),
-              working_area_count:($kc[0].count//0),
-              well_samples:[$ws[0].features[]?.attributes],
-              working_areas:[$ks[0].features[]?.attributes]
-            }' > live/investment-energy.json
-
-          ACTIVE_WEIGHT=$(jq '[.institutions[]|select(.status=="active")|.weight]|add // 0' data/investment-sources.json)
-          ACTIVE_COUNT=$(jq '[.institutions[]|select(.status=="active")]|length' data/investment-sources.json)
-          TOTAL_COUNT=$(jq '.institutions|length' data/investment-sources.json)
-          INDUSTRY_COUNT=$(jq '[.themes[]?.count]|add // 0' live/investment-industry.json)
-          WELL_COUNT=$(jq '.well_count' live/investment-energy.json)
-          WK_COUNT=$(jq '.working_area_count' live/investment-energy.json)
-
-          cat > live/investment-summary.json <<EOF
-          {
-            "generated_at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "eligible_sources":$ACTIVE_COUNT,
-            "total_priority_sources":$TOTAL_COUNT,
-            "coverage_weight":$ACTIVE_WEIGHT,
-            "score_ready":$( [ "$ACTIVE_WEIGHT" -ge 70 ] && echo true || echo false ),
-            "industry_dataset_matches":$INDUSTRY_COUNT,
-            "esdm_wells":$WELL_COUNT,
-            "esdm_working_areas_2026":$WK_COUNT
-          }
-          EOF
-
-          cp live/investment-summary.json live/investment-status.json
-
-          jq -e '.coverage_weight>=0 and .total_priority_sources==8' live/investment-summary.json >/dev/null
-          jq -e '(.items|type=="array") and (.themes|type=="object")' live/investment-industry.json >/dev/null
-          jq -e '.well_count>0 and .working_area_count>0' live/investment-energy.json >/dev/null
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
