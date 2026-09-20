@@ -6,7 +6,8 @@ const state={
   summary:{},
   industry:{available:false,themes:{},items:[]},
   energy:{well_count:0,working_area_count:0,well_samples:[],working_areas:[]},
-  status:{}
+  status:{},
+  regional:{regions:[]}
 };
 
 const LIVE={
@@ -15,7 +16,8 @@ const LIVE={
   summary:'./live/investment-summary.json',
   industry:'./live/investment-industry.json',
   energy:'./live/investment-energy.json',
-  status:'./live/investment-status.json'
+  status:'./live/investment-status.json',
+  regional:'./live/regional-summary.json'
 };
 
 const esc=v=>String(v??'')
@@ -222,6 +224,36 @@ function renderEnergy(){
     :'<div class="empty-inline">Sample sumur belum tersedia.</div>';
 }
 
+function regionalDatasetBase(key){
+  return ({
+    aceh:'https://data.acehprov.go.id/id/dataset/',
+    sumbar:'https://data.sumbarprov.go.id/dataset/',
+    sumsel:'https://opendata.sumselprov.go.id/dataset/',
+    banten:'https://data.bantenprov.go.id/dataset/',
+    jateng:'https://data.jatengprov.go.id/dataset/',
+    kaltim:'https://data.kaltimprov.go.id/dataset/'
+  })[key]||'#';
+}
+function renderRegionalInvestment(){
+  const provinces=(state.regional.regions||[]).filter(x=>x.level==='provinsi'&&x.available!==false);
+  const total=provinces.reduce((sum,x)=>sum+(Number(x.count)||0),0);
+  const pc=$('#regionalProvinceCount'),dt=$('#regionalDatasetTotal'),grid=$('#regionalInvestmentGrid');
+  if(pc)pc.textContent=fmt(provinces.length)+'/38';
+  if(dt)dt.textContent=fmt(total);
+  if(!grid)return;
+  grid.innerHTML=provinces.map(r=>{
+    const latest=[...(r.items||[])].sort((x,y)=>new Date(y.metadata_modified||0)-new Date(x.metadata_modified||0))[0];
+    const base=regionalDatasetBase(r.key);
+    const href=base==='#'?'#':base+(latest?.name||'');
+    return '<article class="regional-coverage-card">'+
+      '<div><span>'+esc(r.name)+'</span><strong>'+fmt(r.count)+'</strong></div>'+
+      '<small>VERIFIED PUBLIC REST · PROVINSI</small>'+
+      '<p>'+esc(latest?.title||'Katalog data daerah aktif')+'</p>'+
+      (href!=='#'?'<a href="'+esc(href)+'" target="_blank" rel="noopener">Dataset terbaru ↗</a>':'')+
+    '</article>';
+  }).join('')||'<div class="empty-inline">Coverage provinsi belum tersedia.</div>';
+}
+
 function renderAll(){
   renderInstitutions();
   renderCoverage();
@@ -229,6 +261,7 @@ function renderAll(){
   renderSourceReadiness();
   renderIndustry();
   renderEnergy();
+  renderRegionalInvestment();
 }
 async function loadAll(){
   const tasks=await Promise.allSettled([
@@ -237,7 +270,8 @@ async function loadAll(){
     json(LIVE.summary),
     json(LIVE.industry),
     json(LIVE.energy),
-    json(LIVE.status)
+    json(LIVE.status),
+    json(LIVE.regional)
   ]);
   if(tasks[0].status==='fulfilled')state.sources=tasks[0].value;
   if(tasks[1].status==='fulfilled')state.model=tasks[1].value;
@@ -245,6 +279,7 @@ async function loadAll(){
   if(tasks[3].status==='fulfilled')state.industry=tasks[3].value;
   if(tasks[4].status==='fulfilled')state.energy=tasks[4].value;
   if(tasks[5].status==='fulfilled')state.status=tasks[5].value;
+  if(tasks[6].status==='fulfilled')state.regional=tasks[6].value;
   renderAll();
 }
 async function reloadAll(){await loadAll();toast('Investment data diperbarui')}
