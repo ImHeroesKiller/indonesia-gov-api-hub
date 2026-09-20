@@ -1,4 +1,4 @@
-const CACHE='nusadata-v8-expanded-domains';
+const CACHE='nusadata-v9-statistical-indicators';
 
 const CORE=[
   './',
