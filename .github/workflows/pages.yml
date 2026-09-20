@@ -25,6 +25,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate frontend JavaScript
+        run: |
+          node --check app.js
+          node -e "JSON.parse(require('fs').readFileSync('data/apis.json','utf8')); console.log('registry json ok')"
+
       - name: Fetch live government data
         shell: bash
         run: |
