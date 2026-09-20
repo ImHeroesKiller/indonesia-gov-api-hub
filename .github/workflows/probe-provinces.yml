@@ -12,27 +12,12 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe provincial CKAN candidates
+      - name: Probe Kalimantan Timur
         shell: bash
         run: |
-          set +e
-          probe () {
-            province="$1"; url="$2"
-            echo "===== $province ====="
-            tmp=$(mktemp)
-            code=$(curl -L --retry 1 --connect-timeout 8 --max-time 25 -A "NusaData-Probe/1.0" -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "$url")
-            if jq -e '.success==true and (.result.results|type=="array")' "$tmp" >/dev/null 2>&1; then
-              echo "HTTP=$code VALID=true"
-              jq -c '{count:.result.count,first:(.result.results[0].title//null)}' "$tmp"
-            else
-              echo "HTTP=$code VALID=false"
-              head -c 180 "$tmp" | tr '\n' ' '; echo
-            fi
-            rm -f "$tmp"
-          }
-          probe "Aceh" "https://data.acehprov.go.id/id/api/3/action/package_search?rows=1"
-          probe "Sumatera Barat" "https://data.sumbarprov.go.id/api/3/action/package_search?rows=1"
-          probe "Sumatera Selatan" "https://opendata.sumselprov.go.id/api/3/action/package_search?rows=1"
-          probe "Jawa Tengah" "https://data.jatengprov.go.id/api/3/action/package_search?rows=1"
-          probe "Jawa Timur" "https://opendata.jatimprov.go.id/api/3/action/package_search?rows=1"
-          probe "Bali" "https://data.bali.go.id/api/3/action/package_search?rows=1"
+          set -e
+          tmp=$(mktemp)
+          code=$(curl -L --retry 1 --connect-timeout 8 --max-time 25 -A "NusaData-Probe/1.0" -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "https://data.kaltimprov.go.id/api/3/action/package_search?rows=1")
+          echo "HTTP=$code"
+          jq -e '.success==true and (.result.results|type=="array")' "$tmp"
+          jq -c '{count:.result.count,first:(.result.results[0].title//null)}' "$tmp"
