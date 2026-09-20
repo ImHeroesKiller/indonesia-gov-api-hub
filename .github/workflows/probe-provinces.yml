@@ -12,12 +12,24 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe Kalimantan Timur
+      - name: Probe Lampung
         shell: bash
         run: |
-          set -e
-          tmp=$(mktemp)
-          code=$(curl -L --retry 1 --connect-timeout 8 --max-time 25 -A "NusaData-Probe/1.0" -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "https://data.kaltimprov.go.id/api/3/action/package_search?rows=1")
-          echo "HTTP=$code"
-          jq -e '.success==true and (.result.results|type=="array")' "$tmp"
-          jq -c '{count:.result.count,first:(.result.results[0].title//null)}' "$tmp"
+          set +e
+          for url in \
+            "https://opendata.lampungprov.go.id/api/3/action/package_search?rows=1" \
+            "https://opendata.lampungprov.go.id/data.json"
+          do
+            echo "===== $url ====="
+            tmp=$(mktemp)
+            code=$(curl -L --retry 1 --connect-timeout 8 --max-time 25 -A "NusaData-Probe/1.0" -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "$url")
+            echo "HTTP=$code"
+            if jq -e . "$tmp" >/dev/null 2>&1; then
+              echo "JSON=true"
+              jq -c 'if .success==true then {type:"ckan",count:.result.count} elif (.dataset|type=="array") then {type:"dcat",count:(.dataset|length),first:(.dataset[0].title//null)} else {keys:keys} end' "$tmp" | head -c 1000
+              echo
+            else
+              echo "JSON=false"
+            fi
+            rm -f "$tmp"
+          done
