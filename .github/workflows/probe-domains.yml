@@ -12,11 +12,10 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe environment and energy domain layers
+      - name: Probe ESDM substantive public layers
         shell: bash
         run: |
           set +e
-
           inspect () {
             name="$1"; url="$2"
             echo "===== $name ====="
@@ -25,16 +24,16 @@ jobs:
             echo "HTTP=$code BYTES=$(wc -c < "$tmp")"
             if jq -e . "$tmp" >/dev/null 2>&1; then
               echo "JSON=valid"
-              jq -c 'if type=="object" then {keys:keys,layers:(.layers//[]|map({id,name})),folders:(.folders//[]),services:(.services//[]|map(.name))} else . end' "$tmp" | head -c 5000
+              jq -c 'if type=="object" then {error:.error,layers:(.layers//[]|map({id,name})),count:.count,features_count:(.features//[]|length)} else . end' "$tmp" | head -c 5000
               echo
             else
               echo "JSON=invalid"
-              head -c 400 "$tmp" | tr '\n' ' '; echo
             fi
             rm -f "$tmp"
           }
 
-          inspect "Jakarta Taman" "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Taman/FeatureServer?f=pjson"
-          inspect "Jakarta Public Transport Coverage" "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Public_Transport_Coverage_2025/FeatureServer?f=pjson"
-          inspect "ESDM MDR2 folder" "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2?f=pjson"
-          inspect "ESDM VDR folder" "https://datamigas.esdm.go.id/arcgis/rest/services/VDR?f=pjson"
+          inspect "ESDM wells MapServer" "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/MapServer?f=pjson"
+          inspect "ESDM wells FeatureServer" "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/FeatureServer?f=pjson"
+          inspect "ESDM WK 2026 MapServer" "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/MapServer?f=pjson"
+          inspect "ESDM WK 2026 FeatureServer" "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/FeatureServer?f=pjson"
+          inspect "Jakarta Transport Coverage count" "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Public_Transport_Coverage_2025/FeatureServer/2/query?where=1%3D1&returnCountOnly=true&f=json"
