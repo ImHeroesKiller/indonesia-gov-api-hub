@@ -56,7 +56,7 @@ jobs:
           curl_json () {
             url="$1"
             out="$2"
-            curl -fL --retry 2 --retry-delay 2 --connect-timeout 12 --max-time 45 \
+            curl -fL --retry 4 --retry-all-errors --retry-delay 2 --connect-timeout 12 --max-time 60 \
               -A "NusaData/1.0 (+https://github.com/ImHeroesKiller/indonesia-gov-api-hub)" \
               -H "Accept: application/json" \
               -sS "$url" -o "$out"
