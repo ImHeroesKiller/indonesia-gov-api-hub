@@ -43,7 +43,8 @@ jobs:
             'modelStatus','scoreBadge','factorGrid','sourceCoverage',
             'industryHighlights','energyHighlights','macroInstitutions',
             'tradeInstitutions','industrialThemes','industrialFeed',
-            'energyWellCount','energyWKCount','workingAreaList','wellSampleList','sourceMatrix'
+            'energyWellCount','energyWKCount','workingAreaList','wellSampleList','sourceMatrix',
+            'regionalProvinceCount','regionalDatasetTotal','regionalInvestmentGrid'
           ];
           const missing=required.filter(id=>!ids.includes(id));
           if(missing.length){console.error('Missing DOM contract',missing);process.exit(1)}
@@ -129,12 +130,56 @@ jobs:
               working_areas:[$ks[0].features[]?.attributes]
             }' > live/investment-energy.json
 
+          # Regional investment capacity — verified provincial CKAN REST
+          curl_json "https://data.acehprov.go.id/id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "tmp-invest/aceh.json" &
+          r1=$!
+          curl_json "https://data.sumbarprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "tmp-invest/sumbar.json" &
+          r2=$!
+          curl_json "https://opendata.sumselprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "tmp-invest/sumsel.json" &
+          r3=$!
+          curl_json "https://data.bantenprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "tmp-invest/banten.json" &
+          r4=$!
+          curl_json "https://data.jatengprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "tmp-invest/jateng.json" &
+          r5=$!
+          curl_json "https://data.kaltimprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "tmp-invest/kaltim.json" &
+          r6=$!
+          wait "$r1" "$r2" "$r3" "$r4" "$r5" "$r6"
+
+          for f in tmp-invest/aceh.json tmp-invest/sumbar.json tmp-invest/sumsel.json tmp-invest/banten.json tmp-invest/jateng.json tmp-invest/kaltim.json; do
+            jq -e '.success==true and (.result.results|type=="array")' "$f" >/dev/null
+          done
+
+          jq -n \
+            --slurpfile ac tmp-invest/aceh.json \
+            --slurpfile sb tmp-invest/sumbar.json \
+            --slurpfile ss tmp-invest/sumsel.json \
+            --slurpfile bt tmp-invest/banten.json \
+            --slurpfile jt tmp-invest/jateng.json \
+            --slurpfile kt tmp-invest/kaltim.json \
+            '{
+              generated_at:(now|todateiso8601),
+              verified_provinces:6,
+              target_provinces:38,
+              regions:[
+                {key:"aceh",name:"Aceh",level:"provinsi",available:true,count:($ac[0].result.count//0),items:($ac[0].result.results//[])},
+                {key:"sumbar",name:"Sumatera Barat",level:"provinsi",available:true,count:($sb[0].result.count//0),items:($sb[0].result.results//[])},
+                {key:"sumsel",name:"Sumatera Selatan",level:"provinsi",available:true,count:($ss[0].result.count//0),items:($ss[0].result.results//[])},
+                {key:"banten",name:"Banten",level:"provinsi",available:true,count:($bt[0].result.count//0),items:($bt[0].result.results//[])},
+                {key:"jateng",name:"Jawa Tengah",level:"provinsi",available:true,count:($jt[0].result.count//0),items:($jt[0].result.results//[])},
+                {key:"kaltim",name:"Kalimantan Timur",level:"provinsi",available:true,count:($kt[0].result.count//0),items:($kt[0].result.results//[])}
+              ]
+            }' > live/regional-summary.json
+
+          jq -e '.verified_provinces==6 and ([.regions[].count]|add)>0' live/regional-summary.json >/dev/null
+
           ACTIVE_WEIGHT=$(jq '[.institutions[]|select(.status=="active")|.weight]|add // 0' data/investment-sources.json)
           ACTIVE_COUNT=$(jq '[.institutions[]|select(.status=="active")]|length' data/investment-sources.json)
           TOTAL_COUNT=$(jq '.institutions|length' data/investment-sources.json)
           INDUSTRY_COUNT=$(jq '[.themes[].count]|add // 0' live/investment-industry.json)
           WELL_COUNT=$(jq '.well_count' live/investment-energy.json)
           WK_COUNT=$(jq '.working_area_count' live/investment-energy.json)
+          VERIFIED_PROVINCES=$(jq '.verified_provinces' live/regional-summary.json)
+          REGIONAL_DATASET_TOTAL=$(jq '[.regions[].count]|add // 0' live/regional-summary.json)
 
           cat > live/investment-summary.json <<EOF
           {
@@ -145,7 +190,9 @@ jobs:
             "score_ready":$( [ "$ACTIVE_WEIGHT" -ge 70 ] && echo true || echo false ),
             "industry_dataset_matches":$INDUSTRY_COUNT,
             "esdm_wells":$WELL_COUNT,
-            "esdm_working_areas_2026":$WK_COUNT
+            "esdm_working_areas_2026":$WK_COUNT,
+            "verified_provinces":$VERIFIED_PROVINCES,
+            "regional_dataset_total":$REGIONAL_DATASET_TOTAL
           }
           EOF
 
