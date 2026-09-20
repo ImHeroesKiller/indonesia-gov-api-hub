@@ -1,7 +1,7 @@
 {
-  "name": "NusaData — Investment Intelligence Indonesia",
+  "name": "NusaData — Business Cost & Compliance",
   "short_name": "NusaData",
-  "description": "Dashboard investment intelligence berbasis data fiskal, moneter, perdagangan, industri, energi, pajak dan kapasitas daerah dari sumber resmi.",
+  "description": "Kalkulator pajak bisnis, UMP/UMK/UMSK, BPJS, dan employer cost Indonesia.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
