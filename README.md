@@ -1,73 +1,71 @@
-# NusaData — Public Data Indonesia
+# NusaData — Indonesia Investment Intelligence
 
-NusaData menampilkan **data publik Indonesia dari REST/JSON API pemerintah, BUMN, dan BUMD tanpa autentikasi**.
+NusaData sekarang difokuskan sebagai **investment intelligence dashboard**, bukan portal open-data umum.
 
-## Kebijakan sumber
+## Scope
 
-Sumber hanya boleh masuk jika:
-- dapat diakses via HTTP GET publik;
-- menghasilkan JSON/GeoJSON valid;
-- tidak membutuhkan API key, OAuth, login, cookie, atau credential;
+Dashboard hanya memprioritaskan sumber yang dapat dipakai untuk merumuskan keputusan investasi:
+
+1. Kementerian Keuangan — fiskal, APBN, public capex, transfer ke daerah
+2. Direktorat Jenderal Pajak — tax base dan aktivitas sektoral
+3. Direktorat Jenderal Bea dan Cukai — customs, bea masuk/keluar, trade friction
+4. Bank Indonesia — kurs, policy rate, kredit, likuiditas, sistem pembayaran
+5. Kementerian Dalam Negeri — kapasitas fiskal/implementasi daerah
+6. Kementerian ESDM — energi, migas, resource depth
+7. Kementerian Perdagangan — ekspor, impor, neraca perdagangan, komoditas
+8. Kementerian Perindustrian — kapasitas industri, kawasan industri, hilirisasi
+
+## Strict data policy
+
+Input model hanya boleh menggunakan endpoint yang:
+
+- resmi milik institusi;
+- machine-readable;
+- public REST/JSON;
+- tidak membutuhkan API key;
+- tidak membutuhkan OAuth/login/cookie;
 - tidak membutuhkan private network;
-- bukan scraping HTML atau file download manual.
+- bukan hasil scraping halaman web.
 
-Semua sumber aktif diuji dari GitHub Actions. Snapshot inti diblokir bila validasi sumber wajib gagal. Discovery/indicator lookups yang bersifat pelengkap memakai fallback agar satu portal daerah tidak menjatuhkan seluruh dashboard.
+Sumber yang resmi tetapi memerlukan autentikasi/approval, menggunakan protokol non-REST, atau sedang tidak dapat dijangkau **tetap ditampilkan sebagai gap**, tetapi tidak dihitung sebagai input model.
 
-## Coverage saat ini
+## Investment Signal Engine
 
-- **17 source REST/JSON aktif** dalam registry.
-- **6 dari 38 provinsi** sudah diverifikasi langsung dari GitHub Actions sebagai public CKAN REST/no-auth:
-  1. Aceh — ±4.175 dataset
-  2. Sumatera Barat — ±3.165 dataset
-  3. Sumatera Selatan — ±948 dataset
-  4. Banten — CKAN + DataStore statistik langsung
-  5. Jawa Tengah — ±211.541 dataset
-  6. Kalimantan Timur — ±13.245 dataset
-- Kabupaten Grobogan dipertahankan sebagai pilot level kabupaten dan tidak dihitung sebagai provinsi.
+Model menggunakan enam kelompok faktor:
 
-Angka katalog berasal dari respons `package_search` saat snapshot/probe dan dapat berubah mengikuti portal sumber.
+- Macro & Monetary — 20%
+- Fiscal & Regional Capacity — 15%
+- Trade Momentum — 20%
+- Industrial Capacity — 20%
+- Energy & Resource Depth — 15%
+- Tax & Customs Friction — 10%
 
-## Domain data aktif
+**Score tidak boleh dihitung sebelum minimal 70% bobot sumber eligible tersedia.**
 
-- Cuaca & iklim — BMKG.
-- Bencana & geofisika — BMKG.
-- Geospasial & administrasi — BIG.
-- Transportasi, jalan & RDTR — DKI Jakarta ArcGIS REST.
-- Energi & migas — ESDM Data Migas.
-- Pendidikan, kesehatan, ekonomi, lingkungan, pertanian, demografi, sosial, ketenagakerjaan & keuangan — katalog CKAN lintas daerah.
-- Statistik langsung Banten — pengangguran, kemiskinan, pendapatan daerah, SMK, tempat tidur RS, sampah, produksi perkebunan, IHK.
-- Harga pangan — Food Station.
-- Pelayanan air — PAM JAYA agregat per kelurahan.
-- BUMN infrastruktur — Waskita Karya.
+Ini adalah screening indicator, bukan prediksi return atau rekomendasi investasi.
 
-## Sumber regional terverifikasi
+## Active verified investment REST
 
-- OpenData Aceh
-- Satu Data Sumatera Barat
-- Open Data Sumatera Selatan
-- Satu Data Provinsi Banten
-- Open Data Jawa Tengah
-- Satu Data Kalimantan Timur
-- Open Data Kabupaten Grobogan
+### ESDM
+ArcGIS REST Data Migas:
+- sumur migas;
+- Wilayah Kerja Migas 2026;
+- sample atribut operasional/geografis.
 
-## Kandidat regional yang belum lolos
+### Kemenperin
+CKAN REST resmi terdokumentasi untuk kapasitas industri, kawasan industri, nikel/hilirisasi, EV dan industri hijau. Saat ini konektivitas dari cloud/GitHub runner belum konsisten, sehingga source dikeluarkan dari scoring sampai feed sehat.
 
-Tidak dimasukkan ke production bila probe no-auth gagal. Contoh hasil terakhir:
-- Kalimantan Barat — HTTP 403.
-- Jawa Timur — HTTP 403 pada endpoint CKAN yang diuji.
-- Bali — DNS gagal.
-- Lampung — endpoint kandidat mengembalikan HTTP 404.
-- DI Yogyakarta, Kalimantan Tengah, Gorontalo, Sulawesi Tengah, Papua — DNS/resolve gagal pada endpoint kandidat.
-- NTB dan Maluku — HTTP 404.
-- Kalimantan Selatan dan Sulawesi Selatan — HTTP 403.
-- Sulawesi Utara dan Sulawesi Tenggara — timeout.
+## Architecture
 
-## Privasi
+`Official Investment REST → GitHub Actions validation → normalized snapshots → Investment Signal Engine → dashboard`
 
-PAM JAYA hanya menggunakan **data agregat per kelurahan**. Data pelanggan individual tidak diambil atau ditampilkan.
+Production refresh berjalan setiap 6 jam.
 
-## Arsitektur
+## Files
 
-`Public REST API → GitHub Actions fetch + validate → normalized same-origin JSON snapshot → GitHub Pages dashboard`
+- `data/investment-sources.json` — source governance dan eligibility.
+- `data/investment-model.json` — factor weights dan minimum coverage.
+- `live/investment-summary.json` — aggregate snapshot.
+- `live/investment-industry.json` — industrial intelligence.
+- `live/investment-energy.json` — energy/resource intelligence.
 
-Snapshot dijadwalkan diperbarui setiap 30 menit. Probe/discovery workflow dipisahkan dari production deploy.
