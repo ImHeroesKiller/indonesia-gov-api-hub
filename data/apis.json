@@ -312,6 +312,29 @@
       "description": "Katalog dan DataStore publik Jawa Tengah melalui CKAN REST tanpa autentikasi.",
       "portalUrl": "https://data.jatengprov.go.id/",
       "apiUrl": "https://data.jatengprov.go.id/api/3/action/package_search"
+    },
+    {
+      "id": "kaltim-ckan",
+      "name": "Satu Data Kalimantan Timur",
+      "agency": "Pemerintah Provinsi Kalimantan Timur",
+      "level": "provinsi",
+      "type": "CKAN REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "domains": [
+        "education",
+        "health",
+        "economy",
+        "environment",
+        "agriculture",
+        "demography",
+        "social",
+        "employment",
+        "finance"
+      ],
+      "description": "Katalog data publik Kalimantan Timur melalui CKAN REST tanpa autentikasi.",
+      "portalUrl": "https://data.kaltimprov.go.id/",
+      "apiUrl": "https://data.kaltimprov.go.id/api/3/action/package_search"
     }
   ]
 }
