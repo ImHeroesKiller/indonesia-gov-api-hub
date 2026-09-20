@@ -125,6 +125,28 @@ jobs:
           curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "live/esdm-wells-count.json"
           curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "live/esdm-wk2026-count.json"
 
+          # Cross-province public CKAN catalogs
+          curl_json "https://data.sumbarprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/sumbar-datasets.json"
+          curl_json "https://opendata.sumselprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/sumsel-datasets.json"
+          curl_json "https://data.kalbarprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/kalbar-datasets.json"
+
+          jq -e '.success==true and (.result.results|type=="array")' live/sumbar-datasets.json >/dev/null
+          jq -e '.success==true and (.result.results|type=="array")' live/sumsel-datasets.json >/dev/null
+          jq -e '.success==true and (.result.results|type=="array")' live/kalbar-datasets.json >/dev/null
+
+          jq -n --slurpfile b live/banten-datasets.json --slurpfile g live/grobogan-datasets.json --slurpfile sb live/sumbar-datasets.json --slurpfile ss live/sumsel-datasets.json --slurpfile kb live/kalbar-datasets.json '
+            {
+              generated_at:(now|todateiso8601),
+              regions:[
+                {key:"banten",name:"Banten",count:($b[0].result.count//0),items:($b[0].result.results//[])},
+                {key:"grobogan",name:"Grobogan",count:($g[0].result.count//0),items:($g[0].result.results//[])},
+                {key:"sumbar",name:"Sumatera Barat",count:($sb[0].result.count//0),items:($sb[0].result.results//[])},
+                {key:"sumsel",name:"Sumatera Selatan",count:($ss[0].result.count//0),items:($ss[0].result.results//[])},
+                {key:"kalbar",name:"Kalimantan Barat",count:($kb[0].result.count//0),items:($kb[0].result.results//[])}
+              ]
+            }' > live/regional-summary.json
+          jq -e '(.regions|length)==5' live/regional-summary.json >/dev/null
+
           # Direct statistical indicators from verified public CKAN datasets
           fetch_indicator () {
             slug="$1"
@@ -459,7 +481,8 @@ jobs:
               "jakarta_rdtr_features": $(jq -r '.operational.rdtr.count' live/domain-summary.json),
               "esdm_oil_gas_wells": $(jq -r '.operational.oil_gas_wells.count' live/domain-summary.json),
               "esdm_working_areas_2026": $(jq -r '.operational.oil_gas_working_areas_2026.count' live/domain-summary.json),
-              "direct_statistics": 9
+              "direct_statistics": 9,
+              "regional_open_data": 5
             },
             "domains": $DOMAIN_COUNTS
           }
