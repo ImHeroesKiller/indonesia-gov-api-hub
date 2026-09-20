@@ -37,81 +37,153 @@
 
   <main class="app-shell">
     <section class="view active" data-view="dashboard">
-      <div class="hero-data panel">
-        <div>
-          <span class="eyebrow"><i></i> VERIFIED PUBLIC REST DATA</span>
-          <h1>Data publik Indonesia, <span>tanpa key & login.</span></h1>
-          <p>Data diambil hanya dari REST/JSON API pemerintah, BUMN, dan BUMD yang dapat diakses publik tanpa API key, OAuth, login, cookie, atau kredensial. Endpoint yang gagal validasi otomatis tidak ikut dipublikasikan.</p>
+      <section class="panel executive-hero">
+        <div class="executive-copy">
+          <span class="eyebrow"><i></i> INDONESIA PUBLIC DATA · VERIFIED REST</span>
+          <h1>Dashboard data publik <span>Indonesia.</span></h1>
+          <p>Satu tampilan untuk data pemerintah, BUMN, dan BUMD yang lolos validasi public REST tanpa key, login, OAuth, atau credential.</p>
           <div class="hero-actions">
-            <button class="button primary" data-route="weather">Lihat Cuaca</button>
-            <button class="button secondary" data-route="data">Buka Data Publik</button>
+            <button class="button primary" data-route="data">Eksplor Semua Data</button>
+            <button class="button secondary" data-route="sources">Lihat Sumber</button>
           </div>
         </div>
-        <div class="source-badge">
-          <span>SUMBER REST AKTIF</span>
-          <strong id="activeSourceCount">—</strong>
-          <small>sumber tervalidasi</small>
+        <div class="snapshot-card">
+          <div class="snapshot-orbit">
+            <strong id="dashboardHealth">—</strong>
+            <span>source health</span>
+          </div>
+          <div>
+            <small>SNAPSHOT TERBARU</small>
+            <strong id="dashboardUpdated">Memuat…</strong>
+            <span id="dashboardHealthText">Memeriksa sumber publik</span>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div class="live-grid">
+      <section class="dashboard-kpis" aria-label="Ringkasan data">
+        <article class="panel metric-card">
+          <span>REST aktif</span>
+          <strong id="activeSourceCount">—</strong>
+          <small>Pemerintah + BUMN/BUMD</small>
+        </article>
+        <article class="panel metric-card">
+          <span>Dataset daerah</span>
+          <strong id="dashboardDatasetCount">—</strong>
+          <small>Banten + Grobogan</small>
+        </article>
+        <article class="panel metric-card">
+          <span>Wilayah BIG</span>
+          <strong id="bigSummaryCount">—</strong>
+          <small>desa / kelurahan</small>
+        </article>
+        <article class="panel metric-card">
+          <span>Gempa M5+</span>
+          <strong id="dashboardM5Count">—</strong>
+          <small>snapshot BMKG</small>
+        </article>
+        <article class="panel metric-card">
+          <span>BUMN & BUMD</span>
+          <strong id="enterpriseSummaryCount">—</strong>
+          <small>sumber resmi</small>
+        </article>
+        <article class="panel metric-card">
+          <span>Keluhan PAM</span>
+          <strong id="dashboardPamTotal">—</strong>
+          <small>agregat snapshot</small>
+        </article>
+      </section>
+
+      <section class="dashboard-live-grid">
         <article class="panel live-card weather-card">
           <div class="card-head">
-            <div><span class="kicker">BMKG · PUBLIC REST</span><h2>Cuaca Kemayoran</h2></div>
+            <div><span class="kicker">BMKG · CUACA</span><h2>Kemayoran sekarang</h2></div>
             <span id="weatherStatus" class="status-chip">Memuat…</span>
           </div>
           <div id="weatherNow" class="weather-now skeleton-block"></div>
           <div id="weatherMini" class="mini-forecast"></div>
-          <div class="source-note">Sumber: BMKG Public Weather API · tanpa autentikasi</div>
+          <button class="text-button dashboard-link" data-route="weather">Prakiraan lengkap →</button>
         </article>
 
         <article class="panel live-card quake-card">
           <div class="card-head">
-            <div><span class="kicker">BMKG · PUBLIC JSON</span><h2>Gempa terbaru</h2></div>
+            <div><span class="kicker">BMKG · KEGEMPAAN</span><h2>Gempa terbaru</h2></div>
             <span id="quakeStatus" class="status-chip">Memuat…</span>
           </div>
           <div id="latestQuake" class="quake-main skeleton-block"></div>
-          <div class="source-note">Sumber: BMKG Open Earthquake JSON · tanpa autentikasi</div>
-        </article>
-      </div>
-
-      <section class="public-summary-grid">
-        <article class="panel summary-card">
-          <span class="kicker">BIG · GEOSPASIAL</span>
-          <strong id="bigSummaryCount">—</strong>
-          <h3>Batas desa/kelurahan</h3>
-          <p>Jumlah fitur wilayah administrasi yang dapat dibaca melalui ArcGIS REST publik BIG.</p>
-          <button class="text-button" data-route="data">Lihat data →</button>
-        </article>
-        <article class="panel summary-card">
-          <span class="kicker">SATU DATA BANTEN</span>
-          <strong id="bantenSummaryCount">—</strong>
-          <h3>Dataset publik</h3>
-          <p id="bantenLatest">Memuat dataset terbaru…</p>
-          <button class="text-button" data-route="data">Lihat dataset →</button>
-        </article>
-        <article class="panel summary-card">
-          <span class="kicker">OPEN DATA GROBOGAN</span>
-          <strong id="groboganSummaryCount">—</strong>
-          <h3>Dataset publik</h3>
-          <p id="groboganLatest">Memuat dataset terbaru…</p>
-          <button class="text-button" data-route="data">Lihat dataset →</button>
-        </article>
-        <article class="panel summary-card">
-          <span class="kicker">BUMN & BUMD</span>
-          <strong id="enterpriseSummaryCount">—</strong>
-          <h3>Sumber korporasi publik</h3>
-          <p>REST resmi perusahaan milik negara/daerah yang lolos validasi tanpa autentikasi.</p>
-          <button class="text-button" data-route="data">Lihat data →</button>
+          <button class="text-button dashboard-link" data-route="earthquake">Aktivitas gempa →</button>
         </article>
       </section>
 
-      <section class="panel section-panel">
+      <section class="dashboard-analysis-grid">
+        <article class="panel dashboard-panel">
+          <div class="section-head">
+            <div><span class="kicker">DATA COVERAGE</span><h2>Volume snapshot</h2></div>
+            <span class="status-chip">MULTI-SOURCE</span>
+          </div>
+          <p class="panel-description">Perbandingan volume record dalam tiap collection. Skala bersifat relatif di antara collection, bukan perbandingan substantif antar-domain.</p>
+          <div id="dashboardCoverageBars" class="coverage-bars"></div>
+        </article>
+
+        <article class="panel dashboard-panel">
+          <div class="section-head">
+            <div><span class="kicker">SOURCE MIX</span><h2>Cakupan institusi</h2></div>
+            <span class="status-chip">NO AUTH</span>
+          </div>
+          <div id="dashboardSourceMix" class="source-mix"></div>
+          <div class="dataset-snapshot">
+            <div><span>Satu Data Banten</span><strong id="bantenSummaryCount">—</strong></div>
+            <div><span>Open Data Grobogan</span><strong id="groboganSummaryCount">—</strong></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="dashboard-two-column">
+        <article class="panel dashboard-panel">
+          <div class="section-head">
+            <div><span class="kicker">DISASTER MONITOR</span><h2>Gempa M5+ terbaru</h2></div>
+            <button class="text-button" data-route="earthquake">Semua →</button>
+          </div>
+          <div id="dashboardQuakes" class="table-lite compact-list"></div>
+        </article>
+
+        <article class="panel dashboard-panel">
+          <div class="section-head">
+            <div><span class="kicker">BUMN & BUMD</span><h2>Operasional publik</h2></div>
+            <button class="text-button" data-route="data">Detail →</button>
+          </div>
+          <div class="enterprise-dashboard-kpis">
+            <div><span>Food Station</span><strong id="dashboardFoodCount">—</strong><small>produk</small></div>
+            <div><span>PAM JAYA</span><strong id="dashboardPamAreas">—</strong><small>wilayah</small></div>
+            <div><span>Waskita</span><strong id="dashboardWaskitaCount">—</strong><small>publikasi</small></div>
+          </div>
+          <div id="dashboardEnterpriseHighlights" class="enterprise-highlights"></div>
+        </article>
+      </section>
+
+      <section class="dashboard-two-column">
+        <article class="panel dashboard-panel">
+          <div class="section-head">
+            <div><span class="kicker">OPEN DATA STREAM</span><h2>Dataset terbaru</h2></div>
+            <button class="text-button" data-route="data">Eksplor →</button>
+          </div>
+          <div id="dashboardDatasets" class="dashboard-feed"></div>
+        </article>
+
+        <article class="panel dashboard-panel">
+          <div class="section-head">
+            <div><span class="kicker">CORPORATE PUBLIC STREAM</span><h2>Publikasi & produk</h2></div>
+            <button class="text-button" data-route="data">BUMN/BUMD →</button>
+          </div>
+          <div id="dashboardEnterpriseFeed" class="dashboard-feed"></div>
+        </article>
+      </section>
+
+      <section class="panel dashboard-panel source-health-panel">
         <div class="section-head">
-          <div><span class="kicker">RECENT EVENTS</span><h2>Gempa M5+ terbaru</h2></div>
-          <button class="text-button" data-route="earthquake">Lihat semua →</button>
+          <div><span class="kicker">DATA PIPELINE</span><h2>Health sumber REST</h2></div>
+          <span id="dashboardHealthBadge" class="status-chip">Memuat…</span>
         </div>
-        <div id="dashboardQuakes" class="table-lite"></div>
+        <div id="dashboardSourceHealth" class="source-health-grid"></div>
       </section>
     </section>
 
