@@ -39,7 +39,8 @@ jobs:
             'weatherNow','latestQuake','dashboardCoverageBars','dashboardSourceMix',
             'dashboardQuakes','dashboardEnterpriseHighlights','dashboardDatasets',
             'dashboardEnterpriseFeed','dashboardSourceHealth','foodstationProducts',
-            'pamjayaTop','waskitaPosts','sourceGrid'
+            'pamjayaTop','waskitaPosts','sourceGrid','dashboardDomainGrid',
+            'dashboardOperationalDomains','domainExplorerGrid','domainOperationalGrid'
           ];
           const missing=required.filter(id=>!ids.includes(id));
           if(missing.length){console.error('Missing dashboard IDs:',missing);process.exit(1)}
@@ -49,50 +50,99 @@ jobs:
       - name: Fetch verified public REST data
         shell: bash
         run: |
-          set -e
-          mkdir -p live
+          set -euo pipefail
+          mkdir -p live tmp-domains
 
           curl_json () {
             url="$1"
             out="$2"
-            curl -fL --retry 2 --retry-delay 2 --connect-timeout 12 --max-time 40               -A "NusaData/1.0 (+https://github.com/ImHeroesKiller/indonesia-gov-api-hub)"               -H "Accept: application/json"               -sS "$url" -o "$out"
+            curl -fL --retry 2 --retry-delay 2 --connect-timeout 12 --max-time 45 \
+              -A "NusaData/1.0 (+https://github.com/ImHeroesKiller/indonesia-gov-api-hub)" \
+              -H "Accept: application/json" \
+              -sS "$url" -o "$out"
             jq -e . "$out" >/dev/null
           }
 
-          # BMKG
-          curl_json             "https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=31.71.03.1001"             "live/weather-kemayoran.json"
+          fetch_domain () {
+            slug="$1"
+            query="$2"
+            b="tmp-domains/${slug}-banten.json"
+            g="tmp-domains/${slug}-grobogan.json"
 
-          curl_json             "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json"             "live/earthquake-latest.json"
+            curl_json "https://data.bantenprov.go.id/api/3/action/package_search?q=${query}&rows=6&sort=metadata_modified%20desc" "$b"
+            curl_json "https://opendata.grobogan.go.id/api/3/action/package_search?q=${query}&rows=6&sort=metadata_modified%20desc" "$g"
 
-          curl_json             "https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json"             "live/earthquake-m5.json"
+            jq -n \
+              --arg domain "$slug" \
+              --arg query "$query" \
+              --slurpfile b "$b" \
+              --slurpfile g "$g" \
+              '{
+                domain:$domain,
+                query:$query,
+                count:(($b[0].result.count // 0)+($g[0].result.count // 0)),
+                sources:{
+                  banten:($b[0].result.count // 0),
+                  grobogan:($g[0].result.count // 0)
+                },
+                items:(
+                  (
+                    [$b[0].result.results[]? | . + {source:"Banten",source_key:"banten"}] +
+                    [$g[0].result.results[]? | . + {source:"Grobogan",source_key:"grobogan"}]
+                  )
+                  | sort_by(.metadata_modified // "")
+                  | reverse
+                  | .[:8]
+                )
+              }' > "live/domain-${slug}.json"
+          }
 
-          curl_json             "https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json"             "live/earthquake-felt.json"
+          # Weather & disaster
+          curl_json "https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=31.71.03.1001" "live/weather-kemayoran.json"
+          curl_json "https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json" "live/earthquake-latest.json"
+          curl_json "https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json" "live/earthquake-m5.json"
+          curl_json "https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json" "live/earthquake-felt.json"
 
-          # BIG
-          curl_json             "https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/Administrasi_AR_KelDesa_10K/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json"             "live/big-village-count.json"
+          # Geospatial & administration
+          curl_json "https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/Administrasi_AR_KelDesa_10K/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "live/big-village-count.json"
+          curl_json "https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/Administrasi_AR_KelDesa_10K/MapServer/0/query?where=1%3D1&outFields=NAMOBJ%2CWADMKD%2CWADMKC%2CWADMKK%2CWADMPR%2CKDEPUM&returnGeometry=false&resultRecordCount=12&orderByFields=OBJECTID&f=json" "live/big-village-sample.json"
 
-          curl_json             "https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/Administrasi_AR_KelDesa_10K/MapServer/0/query?where=1%3D1&outFields=NAMOBJ%2CWADMKD%2CWADMKC%2CWADMKK%2CWADMPR%2CKDEPUM&returnGeometry=false&resultRecordCount=12&orderByFields=OBJECTID&f=json"             "live/big-village-sample.json"
+          # Cross-domain government catalogs
+          curl_json "https://data.bantenprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/banten-datasets.json"
+          curl_json "https://opendata.grobogan.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/grobogan-datasets.json"
 
-          # CKAN public read APIs
-          curl_json             "https://data.bantenprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc"             "live/banten-datasets.json"
+          # BUMN / BUMD
+          curl_json "https://foodstation.id/wp-json/wc/store/products?per_page=24" "live/foodstation-products.json"
+          curl_json "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer/3/query?where=1%3D1&outFields=kelurahan%2Ckecamatan%2Ckotamadya%2Csum_keluha&returnGeometry=false&f=json" "live/pamjaya-complaints.json"
+          curl_json "https://www.waskita.co.id/wp-json/wp/v2/posts?per_page=12&_fields=id,date,link,title,excerpt" "live/waskita-posts.json"
 
-          curl_json             "https://opendata.grobogan.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc"             "live/grobogan-datasets.json"
+          # Transport & infrastructure
+          curl_json "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Titik_Transportasi_Umum_Jakarta_v3/FeatureServer/26/query?where=1%3D1&outFields=jenis%2Cfungsi&returnGeometry=false&resultRecordCount=2000&f=json" "live/jakarta-transport.json"
+          curl_json "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Peta_Jalan_DKI/FeatureServer/1/query?where=1%3D1&returnCountOnly=true&f=json" "live/jakarta-roads-count.json"
+          curl_json "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/rdtr_2022_new/FeatureServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "live/jakarta-rdtr-count.json"
 
-          # BUMN / BUMD official public REST APIs
-          curl_json \
-            "https://foodstation.id/wp-json/wc/store/products?per_page=24" \
-            "live/foodstation-products.json"
+          # Energy & oil/gas
+          curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "live/esdm-wells-count.json"
+          curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "live/esdm-wk2026-count.json"
 
-          curl_json \
-            "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer/3/query?where=1%3D1&outFields=kelurahan%2Ckecamatan%2Ckotamadya%2Csum_keluha&returnGeometry=false&f=json" \
-            "live/pamjaya-complaints.json"
+          # Thematic domain discovery from public CKAN catalogs
+          for spec in \
+            "education:pendidikan" \
+            "health:kesehatan" \
+            "economy:ekonomi" \
+            "environment:lingkungan" \
+            "agriculture:pertanian" \
+            "demography:penduduk" \
+            "social:kemiskinan" \
+            "employment:ketenagakerjaan" \
+            "finance:keuangan"
+          do
+            slug="${spec%%:*}"
+            query="${spec#*:}"
+            fetch_domain "$slug" "$query"
+          done
 
-          curl_json \
-            "https://www.waskita.co.id/wp-json/wp/v2/posts?per_page=12&_fields=id,date,link,title,excerpt" \
-            "live/waskita-posts.json"
-
-
-          # Strict validation: deploy only valid no-auth public data.
+          # Strict validation
           jq -e '(.data|type=="array") and (.data|length>0)' live/weather-kemayoran.json >/dev/null
           jq -e '.Infogempa.gempa != null' live/earthquake-latest.json >/dev/null
           jq -e '(.Infogempa.gempa|type=="array")' live/earthquake-m5.json >/dev/null
@@ -108,11 +158,69 @@ jobs:
           jq -e '(.features|type=="array") and (.features|length>0)' live/pamjaya-complaints.json >/dev/null
           jq -e 'type=="array" and length>0' live/waskita-posts.json >/dev/null
 
+          jq -e '(.features|type=="array") and (.features|length>0)' live/jakarta-transport.json >/dev/null
+          jq -e '.count > 0' live/jakarta-roads-count.json >/dev/null
+          jq -e '.count > 0' live/jakarta-rdtr-count.json >/dev/null
+          jq -e '.count > 0' live/esdm-wells-count.json >/dev/null
+          jq -e '.count > 0' live/esdm-wk2026-count.json >/dev/null
+
+          for f in live/domain-*.json; do
+            jq -e '.count >= 0 and (.items|type=="array")' "$f" >/dev/null
+          done
+
+          # Compact cross-domain snapshot for the frontend
+          jq -n \
+            --slurpfile education live/domain-education.json \
+            --slurpfile health live/domain-health.json \
+            --slurpfile economy live/domain-economy.json \
+            --slurpfile environment live/domain-environment.json \
+            --slurpfile agriculture live/domain-agriculture.json \
+            --slurpfile demography live/domain-demography.json \
+            --slurpfile social live/domain-social.json \
+            --slurpfile employment live/domain-employment.json \
+            --slurpfile finance live/domain-finance.json \
+            --slurpfile transport live/jakarta-transport.json \
+            --slurpfile roads live/jakarta-roads-count.json \
+            --slurpfile rdtr live/jakarta-rdtr-count.json \
+            --slurpfile wells live/esdm-wells-count.json \
+            --slurpfile wk live/esdm-wk2026-count.json \
+            '{
+              thematic:{
+                education:$education[0],
+                health:$health[0],
+                economy:$economy[0],
+                environment:$environment[0],
+                agriculture:$agriculture[0],
+                demography:$demography[0],
+                social:$social[0],
+                employment:$employment[0],
+                finance:$finance[0]
+              },
+              operational:{
+                transport:{
+                  count:($transport[0].features|length),
+                  modes:(
+                    [$transport[0].features[]?.attributes.fungsi // "Lainnya"]
+                    | sort
+                    | group_by(.)
+                    | map({name:.[0],count:length})
+                    | sort_by(-.count)
+                  )
+                },
+                roads:{count:($roads[0].count // 0)},
+                rdtr:{count:($rdtr[0].count // 0)},
+                oil_gas_wells:{count:($wells[0].count // 0)},
+                oil_gas_working_areas_2026:{count:($wk[0].count // 0)}
+              }
+            }' > live/domain-summary.json
+
+          DOMAIN_COUNTS=$(jq -c '.thematic | with_entries(.value=.value.count)' live/domain-summary.json)
+
           cat > live/status.json <<EOF
           {
             "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "policy": "public-rest-no-auth-only",
-            "source_count": 8,
+            "source_count": 12,
             "sources": {
               "bmkg_weather": true,
               "bmkg_earthquake": true,
@@ -121,7 +229,11 @@ jobs:
               "grobogan_ckan": true,
               "foodstation_store": true,
               "pamjaya_complaints": true,
-              "waskita_posts": true
+              "waskita_posts": true,
+              "jakarta_transport": true,
+              "jakarta_roads": true,
+              "jakarta_rdtr": true,
+              "esdm_migas": true
             },
             "metrics": {
               "big_features": $(jq -r '.count' live/big-village-count.json),
@@ -132,8 +244,14 @@ jobs:
               "foodstation_products": $(jq -r 'length' live/foodstation-products.json),
               "pamjaya_areas": $(jq -r '.features|length' live/pamjaya-complaints.json),
               "pamjaya_complaints": $(jq -r '[.features[].attributes.sum_keluha // 0] | add // 0' live/pamjaya-complaints.json),
-              "waskita_posts": $(jq -r 'length' live/waskita-posts.json)
-            }
+              "waskita_posts": $(jq -r 'length' live/waskita-posts.json),
+              "jakarta_transport_points": $(jq -r '.operational.transport.count' live/domain-summary.json),
+              "jakarta_road_features": $(jq -r '.operational.roads.count' live/domain-summary.json),
+              "jakarta_rdtr_features": $(jq -r '.operational.rdtr.count' live/domain-summary.json),
+              "esdm_oil_gas_wells": $(jq -r '.operational.oil_gas_wells.count' live/domain-summary.json),
+              "esdm_working_areas_2026": $(jq -r '.operational.oil_gas_working_areas_2026.count' live/domain-summary.json)
+            },
+            "domains": $DOMAIN_COUNTS
           }
           EOF
 
