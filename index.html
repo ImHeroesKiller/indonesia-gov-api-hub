@@ -4,412 +4,167 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0d1728">
-  <meta name="description" content="NusaData — portal data publik Indonesia dari REST API pemerintah, BUMN, dan BUMD tanpa autentikasi.">
-  <title>NusaData — Public Data Indonesia</title>
+  <meta name="description" content="NusaData Investment Intelligence — data fiskal, moneter, perdagangan, industri dan energi dari sumber resmi Indonesia.">
+  <title>NusaData — Investment Intelligence Indonesia</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
 </head>
-<body>
+<body class="investment-app">
   <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
 
   <header class="topbar">
-    <button class="brand plain-button" data-route="dashboard" aria-label="NusaData">
+    <button class="brand plain-button" data-route="overview" aria-label="NusaData">
       <span class="brand-mark">N</span>
-      <span><strong>NusaData</strong><small>Public REST Data Portal</small></span>
+      <span><strong>NusaData</strong><small>Investment Intelligence</small></span>
     </button>
-
     <nav class="desktop-nav" aria-label="Navigasi utama">
-      <button class="nav-item active" data-route="dashboard">Dashboard</button>
-      <button class="nav-item" data-route="weather">Cuaca</button>
-      <button class="nav-item" data-route="earthquake">Gempa</button>
-      <button class="nav-item" data-route="data">Data Publik</button>
-      <button class="nav-item" data-route="sources">Sumber</button>
+      <button class="nav-item active" data-route="overview">Overview</button>
+      <button class="nav-item" data-route="macro">Macro & Fiscal</button>
+      <button class="nav-item" data-route="trade">Trade & Industry</button>
+      <button class="nav-item" data-route="energy">Energy</button>
+      <button class="nav-item" data-route="sources">Sources</button>
     </nav>
-
     <div class="header-actions">
-      <span class="status-chip">PUBLIC REST ONLY</span>
+      <span class="status-chip">PUBLIC REST · NO AUTH</span>
       <span id="liveClock" class="live-clock"></span>
-      <button id="refreshAll" class="icon-button" title="Muat ulang data" aria-label="Muat ulang data">↻</button>
-      <button id="themeToggle" class="icon-button" title="Ubah tema" aria-label="Ubah tema"><span class="sun">☀</span><span class="moon">☾</span></button>
+      <button id="refreshAll" class="icon-button" aria-label="Muat ulang">↻</button>
+      <button id="themeToggle" class="icon-button" aria-label="Ubah tema"><span class="sun">☀</span><span class="moon">☾</span></button>
     </div>
   </header>
 
   <main class="app-shell">
-    <section class="view active" data-view="dashboard">
-      <section class="panel executive-hero">
-        <div class="executive-copy">
-          <span class="eyebrow"><i></i> INDONESIA PUBLIC DATA · VERIFIED REST</span>
-          <h1>Dashboard data publik <span>Indonesia.</span></h1>
-          <p>Satu tampilan untuk data pemerintah, BUMN, dan BUMD yang lolos validasi public REST tanpa key, login, OAuth, atau credential.</p>
+    <section class="view active" data-view="overview">
+      <section class="panel investment-hero">
+        <div>
+          <span class="eyebrow"><i></i> INDONESIA INVESTMENT INTELLIGENCE</span>
+          <h1>Data yang relevan untuk <span>keputusan investasi.</span></h1>
+          <p>Fokus hanya pada fiskal, pajak, bea cukai, moneter, kapasitas daerah, energi, perdagangan dan industri dari sumber resmi. Data umum yang tidak memengaruhi keputusan investasi tidak ditampilkan.</p>
           <div class="hero-actions">
-            <button class="button primary" data-route="data">Eksplor Semua Data</button>
-            <button class="button secondary" data-route="sources">Lihat Sumber</button>
+            <button class="button primary" data-route="trade">Lihat Trade & Industry</button>
+            <button class="button secondary" data-route="sources">Audit Sources</button>
           </div>
         </div>
-        <div class="snapshot-card">
-          <div class="snapshot-orbit">
-            <strong id="dashboardHealth">—</strong>
-            <span>source health</span>
-          </div>
-          <div>
-            <small>SNAPSHOT TERBARU</small>
-            <strong id="dashboardUpdated">Memuat…</strong>
-            <span id="dashboardHealthText">Memeriksa sumber publik</span>
-          </div>
+        <div class="investment-status-card">
+          <span>SOURCE COVERAGE</span>
+          <strong id="coveragePercent">—</strong>
+          <p id="coverageLabel">Menghitung eligibility sumber…</p>
+          <div class="coverage-meter"><i id="coverageMeter"></i></div>
+          <small id="snapshotTime">Snapshot belum tersedia</small>
         </div>
       </section>
 
-      <section class="dashboard-kpis" aria-label="Ringkasan data">
-        <article class="panel metric-card">
-          <span>REST aktif</span>
-          <strong id="activeSourceCount">—</strong>
-          <small>Pemerintah + BUMN/BUMD</small>
-        </article>
-        <article class="panel metric-card">
-          <span>Dataset daerah</span>
-          <strong id="dashboardDatasetCount">—</strong>
-          <small>Banten + Grobogan</small>
-        </article>
-        <article class="panel metric-card">
-          <span>Wilayah BIG</span>
-          <strong id="bigSummaryCount">—</strong>
-          <small>desa / kelurahan</small>
-        </article>
-        <article class="panel metric-card">
-          <span>Gempa M5+</span>
-          <strong id="dashboardM5Count">—</strong>
-          <small>snapshot BMKG</small>
-        </article>
-        <article class="panel metric-card">
-          <span>BUMN & BUMD</span>
-          <strong id="enterpriseSummaryCount">—</strong>
-          <small>sumber resmi</small>
-        </article>
-        <article class="panel metric-card">
-          <span>Keluhan PAM</span>
-          <strong id="dashboardPamTotal">—</strong>
-          <small>agregat snapshot</small>
-        </article>
-      </section>
-
-      <section class="dashboard-live-grid">
-        <article class="panel live-card weather-card">
-          <div class="card-head">
-            <div><span class="kicker">BMKG · CUACA</span><h2>Kemayoran sekarang</h2></div>
-            <span id="weatherStatus" class="status-chip">Memuat…</span>
-          </div>
-          <div id="weatherNow" class="weather-now skeleton-block"></div>
-          <div id="weatherMini" class="mini-forecast"></div>
-          <button class="text-button dashboard-link" data-route="weather">Prakiraan lengkap →</button>
-        </article>
-
-        <article class="panel live-card quake-card">
-          <div class="card-head">
-            <div><span class="kicker">BMKG · KEGEMPAAN</span><h2>Gempa terbaru</h2></div>
-            <span id="quakeStatus" class="status-chip">Memuat…</span>
-          </div>
-          <div id="latestQuake" class="quake-main skeleton-block"></div>
-          <button class="text-button dashboard-link" data-route="earthquake">Aktivitas gempa →</button>
-        </article>
+      <section class="dashboard-kpis investment-kpis">
+        <article class="panel metric-card"><span>Eligible REST</span><strong id="eligibleSources">—</strong><small>dari 8 institusi prioritas</small></article>
+        <article class="panel metric-card"><span>Kemenperin</span><strong id="industryDatasetCount">—</strong><small>dataset investasi/industri</small></article>
+        <article class="panel metric-card"><span>Sumur Migas</span><strong id="wellCount">—</strong><small>ESDM public REST</small></article>
+        <article class="panel metric-card"><span>WK Migas 2026</span><strong id="workingAreaCount">—</strong><small>wilayah kerja</small></article>
+        <article class="panel metric-card"><span>Model Status</span><strong id="modelStatus">—</strong><small>minimum coverage 70%</small></article>
+        <article class="panel metric-card"><span>Strict Policy</span><strong>ON</strong><small>tanpa key/login/scraping</small></article>
       </section>
 
       <section class="dashboard-analysis-grid">
         <article class="panel dashboard-panel">
           <div class="section-head">
-            <div><span class="kicker">DATA COVERAGE</span><h2>Volume snapshot</h2></div>
-            <span class="status-chip">MULTI-SOURCE</span>
+            <div><span class="kicker">INVESTMENT SIGNAL ENGINE</span><h2>Faktor penilaian</h2></div>
+            <span id="scoreBadge" class="status-chip">NO SCORE YET</span>
           </div>
-          <p class="panel-description">Perbandingan volume record dalam tiap collection. Skala bersifat relatif di antara collection, bukan perbandingan substantif antar-domain.</p>
-          <div id="dashboardCoverageBars" class="coverage-bars"></div>
+          <p class="panel-description">Score hanya dihitung bila sedikitnya 70% bobot sumber resmi tersedia. Sampai itu terpenuhi, sistem menunjukkan coverage dan gap agar tidak memberi sinyal palsu.</p>
+          <div id="factorGrid" class="investment-factor-grid"></div>
         </article>
-
         <article class="panel dashboard-panel">
           <div class="section-head">
-            <div><span class="kicker">SOURCE MIX</span><h2>Cakupan institusi</h2></div>
-            <span class="status-chip">NO AUTH</span>
+            <div><span class="kicker">SOURCE READINESS</span><h2>Institusi prioritas</h2></div>
+            <span class="status-chip">8 SOURCES</span>
           </div>
-          <div id="dashboardSourceMix" class="source-mix"></div>
-          <div class="dataset-snapshot">
-            <div><span>Satu Data Banten</span><strong id="bantenSummaryCount">—</strong></div>
-            <div><span>Open Data Grobogan</span><strong id="groboganSummaryCount">—</strong></div>
-          </div>
-        </article>
-      </section>
-
-      <section class="panel dashboard-panel direct-stat-panel">
-        <div class="section-head">
-          <div><span class="kicker">DIRECT STATISTICS</span><h2>Angka publik langsung</h2></div>
-          <span class="status-chip">NORMALIZED</span>
-        </div>
-        <p class="panel-description">KPI ditarik langsung dari public datastore/REST resmi dan dinormalisasi bersama periode serta satuannya.</p>
-        <div id="dashboardDirectStats" class="direct-stat-grid"></div>
-        <div class="direct-stat-foot">
-          <div id="dashboardIHK" class="direct-mini-list"></div>
-          <div id="dashboardFoodPrices" class="direct-mini-list"></div>
-        </div>
-      </section>
-
-      <section class="panel dashboard-panel regional-dashboard-panel">
-        <div class="section-head">
-          <div><span class="kicker">PROVINCIAL COVERAGE</span><h2>Perbandingan open data provinsi</h2></div>
-          <button class="text-button" data-route="data">Detail wilayah →</button>
-        </div>
-        <div class="regional-dashboard-kpis">
-          <div><span>Provinsi verified</span><strong id="dashboardProvinceCoverage">—</strong><small>public REST / no auth</small></div>
-          <div><span>Total dataset</span><strong id="dashboardRegionalDatasets">—</strong><small>provinsi public REST</small></div>
-        </div>
-        <div id="dashboardRegionalCoverage" class="regional-coverage-grid dashboard-regions"></div>
-      </section>
-
-      <section class="panel dashboard-panel domain-intelligence-panel">
-        <div class="section-head">
-          <div><span class="kicker">DOMAIN INTELLIGENCE</span><h2>Cakupan data lintas sektor</h2></div>
-          <button class="text-button" data-route="data">Eksplor domain →</button>
-        </div>
-        <p class="panel-description">Gabungan data operasional langsung dan katalog tematik dari REST API pemerintah yang telah tervalidasi.</p>
-        <div id="dashboardOperationalDomains" class="operational-domain-grid"></div>
-        <div id="dashboardDomainGrid" class="domain-grid"></div>
-      </section>
-
-      <section class="dashboard-two-column">
-        <article class="panel dashboard-panel">
-          <div class="section-head">
-            <div><span class="kicker">DISASTER MONITOR</span><h2>Gempa M5+ terbaru</h2></div>
-            <button class="text-button" data-route="earthquake">Semua →</button>
-          </div>
-          <div id="dashboardQuakes" class="table-lite compact-list"></div>
-        </article>
-
-        <article class="panel dashboard-panel">
-          <div class="section-head">
-            <div><span class="kicker">BUMN & BUMD</span><h2>Operasional publik</h2></div>
-            <button class="text-button" data-route="data">Detail →</button>
-          </div>
-          <div class="enterprise-dashboard-kpis">
-            <div><span>Food Station</span><strong id="dashboardFoodCount">—</strong><small>produk</small></div>
-            <div><span>PAM JAYA</span><strong id="dashboardPamAreas">—</strong><small>wilayah</small></div>
-            <div><span>Waskita</span><strong id="dashboardWaskitaCount">—</strong><small>publikasi</small></div>
-          </div>
-          <div id="dashboardEnterpriseHighlights" class="enterprise-highlights"></div>
+          <div id="sourceCoverage" class="source-readiness-list"></div>
         </article>
       </section>
 
       <section class="dashboard-two-column">
         <article class="panel dashboard-panel">
-          <div class="section-head">
-            <div><span class="kicker">OPEN DATA STREAM</span><h2>Dataset terbaru</h2></div>
-            <button class="text-button" data-route="data">Eksplor →</button>
-          </div>
-          <div id="dashboardDatasets" class="dashboard-feed"></div>
+          <div class="section-head"><div><span class="kicker">INDUSTRIAL CAPACITY</span><h2>Kemenperin</h2></div><button class="text-button" data-route="trade">Detail →</button></div>
+          <div id="industryHighlights" class="investment-highlight-list"></div>
         </article>
-
         <article class="panel dashboard-panel">
-          <div class="section-head">
-            <div><span class="kicker">CORPORATE PUBLIC STREAM</span><h2>Publikasi & produk</h2></div>
-            <button class="text-button" data-route="data">BUMN/BUMD →</button>
-          </div>
-          <div id="dashboardEnterpriseFeed" class="dashboard-feed"></div>
+          <div class="section-head"><div><span class="kicker">ENERGY & RESOURCES</span><h2>ESDM</h2></div><button class="text-button" data-route="energy">Detail →</button></div>
+          <div id="energyHighlights" class="investment-highlight-list"></div>
         </article>
       </section>
 
-      <section class="panel dashboard-panel source-health-panel">
-        <div class="section-head">
-          <div><span class="kicker">DATA PIPELINE</span><h2>Health sumber REST</h2></div>
-          <span id="dashboardHealthBadge" class="status-chip">Memuat…</span>
+      <section class="panel dashboard-panel formula-panel">
+        <div class="section-head"><div><span class="kicker">FORMULATION</span><h2>Bagaimana data dirumuskan untuk investasi</h2></div></div>
+        <div class="formula-grid">
+          <article><b>Demand & Fiscal</b><span>APBN/APBD, belanja modal, transfer daerah → demand pemerintah & fiscal impulse.</span></article>
+          <article><b>Cost of Capital</b><span>Suku bunga, kurs, likuiditas, kredit → funding cost & currency risk.</span></article>
+          <article><b>Market Momentum</b><span>Ekspor, impor, neraca, harga komoditas → demand dan competitiveness.</span></article>
+          <article><b>Supply Capacity</b><span>Kawasan industri, kapasitas produksi, hilirisasi → installed capacity & clustering.</span></article>
+          <article><b>Resource Advantage</b><span>Data migas/minerba/energi → resource depth & upstream exposure.</span></article>
+          <article><b>Tax & Trade Friction</b><span>Pajak, bea masuk/keluar, tarif → effective burden & market-access friction.</span></article>
         </div>
-        <div id="dashboardSourceHealth" class="source-health-grid"></div>
       </section>
     </section>
 
-    <section class="view" data-view="weather">
-      <div class="page-heading">
-        <div>
-          <span class="eyebrow"><i></i> BMKG PUBLIC WEATHER REST API</span>
-          <h1>Prakiraan Cuaca</h1>
-          <p>Prakiraan 3 harian dari endpoint publik BMKG. Tidak memakai API key atau login.</p>
-        </div>
-      </div>
-
+    <section class="view" data-view="macro">
+      <div class="page-heading"><div><span class="eyebrow"><i></i> MACRO · FISCAL · TAX</span><h1>Macro & Fiscal</h1><p>Kemenkeu, DJP, Bank Indonesia dan Kemendagri. Hanya endpoint machine-readable yang lolos strict public REST yang akan menjadi input model.</p></div></div>
+      <div id="macroInstitutions" class="investment-source-grid"></div>
       <section class="panel section-panel">
-        <div id="weatherLocation" class="location-title"></div>
-        <div id="weatherDetail" class="weather-timeline"></div>
+        <div class="section-head"><div><span class="kicker">DATA TARGET</span><h2>Indikator yang dibutuhkan</h2></div></div>
+        <div class="target-grid">
+          <article><strong>APBN & Public Capex</strong><p>Pendapatan, belanja modal, subsidi, pembiayaan, transfer ke daerah.</p></article>
+          <article><strong>Tax Activity</strong><p>Penerimaan pajak sektoral, PMSE/digital, tax-base momentum dan kurs pajak.</p></article>
+          <article><strong>Monetary Conditions</strong><p>Kurs, policy rate, kredit, likuiditas, sektor korporasi dan pembayaran.</p></article>
+          <article><strong>Regional Capacity</strong><p>PAD, APBD, implementasi daerah, struktur ekonomi dan kapasitas fiskal.</p></article>
+        </div>
       </section>
     </section>
 
-    <section class="view" data-view="earthquake">
-      <div class="page-heading">
-        <div>
-          <span class="eyebrow"><i></i> BMKG PUBLIC EARTHQUAKE JSON</span>
-          <h1>Gempa Indonesia</h1>
-          <p>Gempa terbaru, M5+, dan gempa dirasakan dari data terbuka BMKG tanpa autentikasi.</p>
-        </div>
-      </div>
-
-      <div id="quakeHero" class="panel quake-hero"></div>
-
-      <div class="tab-row">
-        <button class="chip active" data-quake-tab="m5">M5+ terkini</button>
-        <button class="chip" data-quake-tab="felt">Gempa dirasakan</button>
-      </div>
-
+    <section class="view" data-view="trade">
+      <div class="page-heading"><div><span class="eyebrow"><i></i> TRADE · CUSTOMS · INDUSTRY</span><h1>Trade & Industry</h1><p>Kemendag, Bea Cukai, dan Kemenperin untuk membaca demand, market access, kapasitas industri dan hilirisasi.</p></div></div>
+      <div id="tradeInstitutions" class="investment-source-grid"></div>
       <section class="panel section-panel">
-        <div id="quakeList" class="quake-list"></div>
+        <div class="section-head"><div><span class="kicker">KEMENPERIN · PUBLIC CKAN REST</span><h2>Industrial Opportunity Data</h2></div><span class="status-chip">ACTIVE</span></div>
+        <div id="industrialThemes" class="industrial-theme-grid"></div>
+        <div id="industrialFeed" class="dashboard-feed"></div>
       </section>
     </section>
 
-    <section class="view" data-view="data">
-      <div class="page-heading">
-        <div>
-          <span class="eyebrow"><i></i> VERIFIED OPEN INDONESIA DATA</span>
-          <h1>Data Publik</h1>
-          <p>Data berasal dari REST API pemerintah, BUMN, dan BUMD yang sudah lolos tes no-auth dan validasi JSON.</p>
-        </div>
-      </div>
-
-      <section class="panel section-panel">
-        <div class="section-head">
-          <div><span class="kicker">BADAN INFORMASI GEOSPASIAL</span><h2>Wilayah Administrasi</h2></div>
-          <span class="status-chip">ArcGIS REST · Public</span>
-        </div>
-        <div class="geo-stat">
-          <div><span>Total fitur desa/kelurahan</span><strong id="bigCount">—</strong><small>hasil query REST langsung BIG</small></div>
-          <div><span>Contoh data</span><strong id="bigSampleCount">—</strong><small>nama wilayah & kode PUM</small></div>
-        </div>
-        <div id="bigSamples" class="region-list"></div>
+    <section class="view" data-view="energy">
+      <div class="page-heading"><div><span class="eyebrow"><i></i> ESDM · ENERGY & RESOURCE</span><h1>Energy & Resource</h1><p>Resource depth, wilayah kerja dan data operasional ESDM yang tersedia melalui public ArcGIS REST.</p></div></div>
+      <section class="dashboard-kpis">
+        <article class="panel metric-card"><span>Sumur Migas</span><strong id="energyWellCount">—</strong><small>fitur publik</small></article>
+        <article class="panel metric-card"><span>WK 2026</span><strong id="energyWKCount">—</strong><small>tahap 1</small></article>
       </section>
-
       <section class="panel section-panel">
-        <div class="section-head">
-          <div><span class="kicker">CKAN PUBLIC REST</span><h2>Dataset Pemerintah Daerah</h2></div>
-        </div>
-        <div class="tab-row">
-          <button class="chip active" data-catalog-tab="banten">Banten</button>
-          <button class="chip" data-catalog-tab="grobogan">Grobogan</button>
-        </div>
-        <div id="catalogMeta" class="result-meta"></div>
-        <div id="catalogGrid" class="dataset-grid"></div>
+        <div class="section-head"><div><span class="kicker">WILAYAH KERJA</span><h2>WK Migas 2026</h2></div></div>
+        <div id="workingAreaList" class="investment-detail-list"></div>
       </section>
-
       <section class="panel section-panel">
-        <div class="section-head">
-          <div><span class="kicker">DIRECT PUBLIC STATISTICS</span><h2>Statistik Terverifikasi</h2></div>
-          <span class="status-chip">RAW → NORMALIZED</span>
-        </div>
-        <p class="panel-description">Angka berikut berasal dari CKAN DataStore/REST publik resmi dan bukan hasil estimasi NusaData.</p>
-        <div id="directStatsDetail" class="direct-stat-grid detailed"></div>
-        <div class="enterprise-block">
-          <div class="section-head compact"><div><span class="kicker">REGIONAL COVERAGE</span><h3>Open Data lintas wilayah</h3></div></div>
-          <div id="regionalCoverage" class="regional-coverage-grid"></div>
-        </div>
-
-        <div class="dashboard-two-column direct-detail-columns">
-          <div class="enterprise-block">
-            <div class="section-head compact">
-              <div><span class="kicker">IHK KOTA PANTAUAN BANTEN</span><h3>Perubahan 2023 → 2024</h3></div>
-            </div>
-            <div id="directIHKTable" class="stat-table"></div>
-          </div>
-          <div class="enterprise-block">
-            <div class="section-head compact">
-              <div><span class="kicker">FOOD STATION</span><h3>Harga pangan publik</h3></div>
-            </div>
-            <div id="directFoodPriceGrid" class="price-stat-grid"></div>
-          </div>
-        </div>
-
-        <div class="enterprise-block">
-          <div class="section-head compact">
-            <div><span class="kicker">PERKEBUNAN BANTEN 2024</span><h3>Produksi menurut komoditas</h3></div>
-          </div>
-          <div id="directAgriculture" class="agri-stat-list"></div>
-        </div>
-      </section>
-
-      <section class="panel section-panel">
-        <div class="section-head">
-          <div><span class="kicker">MULTI-DOMAIN PUBLIC REST</span><h2>Domain Explorer</h2></div>
-          <span class="status-chip">VERIFIED</span>
-        </div>
-        <p class="panel-description">Transportasi, infrastruktur, tata ruang, energi/migas, pendidikan, kesehatan, ekonomi, lingkungan, pertanian, demografi, sosial, ketenagakerjaan, dan keuangan.</p>
-        <div id="domainOperationalGrid" class="operational-domain-grid detailed"></div>
-        <div class="enterprise-block">
-          <div class="section-head compact">
-            <div><span class="kicker">STATISTICAL INDICATORS</span><h3>Indikator publik langsung</h3></div>
-          </div>
-          <div id="indicatorGrid" class="indicator-grid"></div>
-        </div>
-        <div id="domainExplorerGrid" class="domain-grid detailed"></div>
-        <div class="enterprise-block">
-          <div class="section-head compact">
-            <div><span class="kicker">LATEST BY DOMAIN</span><h3>Dataset tematik terbaru</h3></div>
-          </div>
-          <div id="domainLatestFeed" class="dashboard-feed"></div>
-        </div>
-      </section>
-
-      <section class="panel section-panel">
-        <div class="section-head">
-          <div><span class="kicker">BUMN & BUMD · VERIFIED PUBLIC REST</span><h2>Data BUMN & BUMD</h2></div>
-          <span class="status-chip">NO AUTH</span>
-        </div>
-
-        <div class="enterprise-kpis">
-          <div><span>Food Station</span><strong id="foodstationCount">—</strong><small>produk publik</small></div>
-          <div><span>PAM JAYA</span><strong id="pamComplaintTotal">—</strong><small>keluhan agregat</small></div>
-          <div><span>Waskita Karya</span><strong id="waskitaCount">—</strong><small>publikasi terbaru</small></div>
-        </div>
-
-        <div class="enterprise-block">
-          <div class="section-head compact">
-            <div><span class="kicker">BUMD · FOOD STATION</span><h3>Katalog Produk Pangan</h3></div>
-          </div>
-          <div id="foodstationProducts" class="product-data-grid"></div>
-        </div>
-
-        <div class="enterprise-block">
-          <div class="section-head compact">
-            <div><span class="kicker">BUMD · PAM JAYA</span><h3>Keluhan per Kelurahan</h3></div>
-            <small class="muted-note">Agregat saja · tanpa data pelanggan individual</small>
-          </div>
-          <div id="pamjayaTop" class="region-list"></div>
-        </div>
-
-        <div class="enterprise-block">
-          <div class="section-head compact">
-            <div><span class="kicker">BUMN · WASKITA KARYA</span><h3>Publikasi Terbaru</h3></div>
-          </div>
-          <div id="waskitaPosts" class="news-data-list"></div>
-        </div>
+        <div class="section-head"><div><span class="kicker">UPSTREAM SAMPLE</span><h2>Data Sumur</h2></div></div>
+        <div id="wellSampleList" class="investment-detail-list"></div>
       </section>
     </section>
 
     <section class="view" data-view="sources">
-      <div class="page-heading">
-        <div>
-          <span class="eyebrow"><i></i> VERIFIED SOURCES</span>
-          <h1>Sumber REST Publik</h1>
-          <p>Hanya sumber tanpa API key, OAuth, login, atau credential yang ditampilkan.</p>
-        </div>
-      </div>
-      <div id="sourceGrid" class="source-grid"></div>
+      <div class="page-heading"><div><span class="eyebrow"><i></i> SOURCE GOVERNANCE</span><h1>Investment Data Sources</h1><p>Coverage dan alasan eligibility setiap institusi. Sumber yang memerlukan login/token tidak dipaksakan masuk ke model.</p></div></div>
+      <div id="sourceMatrix" class="source-matrix"></div>
+      <section class="panel section-panel">
+        <div class="section-head"><div><span class="kicker">POLICY</span><h2>Rules</h2></div></div>
+        <div class="policy-copy"><p><strong>Include:</strong> official public REST/JSON, tanpa API key, OAuth, login, cookie, private network, atau scraping HTML.</p><p><strong>Exclude:</strong> CEISA authenticated API, API khusus yang perlu approval, dan sumber web-only sampai endpoint publik yang eligible ditemukan.</p></div>
+      </section>
     </section>
   </main>
 
-  <nav class="mobile-nav" aria-label="Navigasi mobile">
-    <button class="active" data-route="dashboard"><span>⌂</span><small>Home</small></button>
-    <button data-route="weather"><span>☁</span><small>Cuaca</small></button>
-    <button data-route="earthquake"><span>◉</span><small>Gempa</small></button>
-    <button data-route="data"><span>▦</span><small>Data</small></button>
-    <button data-route="sources"><span>◎</span><small>Sumber</small></button>
+  <nav class="mobile-nav">
+    <button class="active" data-route="overview"><span>⌂</span><small>Overview</small></button>
+    <button data-route="macro"><span>◫</span><small>Macro</small></button>
+    <button data-route="trade"><span>↔</span><small>Trade</small></button>
+    <button data-route="energy"><span>◆</span><small>Energy</small></button>
+    <button data-route="sources"><span>◎</span><small>Sources</small></button>
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <footer class="footer">
-    <span>NusaData · Public REST Data Portal</span>
-    <span>Hanya menggunakan REST API publik pemerintah, BUMN, dan BUMD tanpa autentikasi.</span>
-  </footer>
-
+  <footer class="footer"><span>NusaData · Investment Intelligence Indonesia</span><span>Screening tool, bukan proyeksi return atau rekomendasi investasi.</span></footer>
   <script src="./app.js" defer></script>
 </body>
 </html>
