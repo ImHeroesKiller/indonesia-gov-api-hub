@@ -1,0 +1,46 @@
+name: Probe Direct Statistics
+
+on:
+  push:
+    paths:
+      - ".github/workflows/probe-direct-stats.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe CKAN statistical datasets
+        shell: bash
+        run: |
+          set +e
+
+          inspect_ckan () {
+            base="$1"; label="$2"; query="$3"
+            echo "===== $label :: $query ====="
+            tmp=$(mktemp)
+            curl -L --connect-timeout 10 --max-time 30 -A "NusaData-Probe/1.0" -sS               "$base/api/3/action/package_search?q=$query&rows=5" -o "$tmp"
+            if jq -e '.success==true' "$tmp" >/dev/null 2>&1; then
+              jq -c '.result.results[] | {
+                name,title,modified:.metadata_modified,
+                resources:[.resources[]? | {id,name,format,datastore_active,url}]
+              }' "$tmp" | head -n 15
+            else
+              echo "invalid"
+            fi
+            rm -f "$tmp"
+          }
+
+          for q in inflasi pengangguran kemiskinan apbd sekolah puskesmas sampah produksi%20padi; do
+            inspect_ckan "https://data.bantenprov.go.id" "BANTEN" "$q"
+          done
+
+          for q in inflasi pengangguran kemiskinan apbd sekolah puskesmas sampah produksi%20padi; do
+            inspect_ckan "https://opendata.grobogan.go.id" "GROBOGAN" "$q"
+          done
+
+          for q in inflasi pengangguran kemiskinan apbd sekolah puskesmas sampah produksi%20padi; do
+            inspect_ckan "https://opendata.majalengkakab.go.id" "MAJALENGKA" "$q"
+          done
