@@ -153,11 +153,13 @@ jobs:
           curl_json "https://data.sumbarprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/sumbar-datasets.json"
           curl_json "https://opendata.sumselprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/sumsel-datasets.json"
           curl_json "https://data.jatengprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/jateng-datasets.json"
+          curl_json "https://data.kaltimprov.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc" "live/kaltim-datasets.json"
 
           jq -e '.success==true and (.result.results|type=="array")' live/aceh-datasets.json >/dev/null
           jq -e '.success==true and (.result.results|type=="array")' live/sumbar-datasets.json >/dev/null
           jq -e '.success==true and (.result.results|type=="array")' live/sumsel-datasets.json >/dev/null
           jq -e '.success==true and (.result.results|type=="array")' live/jateng-datasets.json >/dev/null
+          jq -e '.success==true and (.result.results|type=="array")' live/kaltim-datasets.json >/dev/null
 
           jq -n \
             --slurpfile b live/banten-datasets.json \
@@ -165,10 +167,11 @@ jobs:
             --slurpfile ac live/aceh-datasets.json \
             --slurpfile sb live/sumbar-datasets.json \
             --slurpfile ss live/sumsel-datasets.json \
-            --slurpfile jt live/jateng-datasets.json '
+            --slurpfile jt live/jateng-datasets.json \
+            --slurpfile kt live/kaltim-datasets.json '
             {
               generated_at:(now|todateiso8601),
-              verified_provinces:5,
+              verified_provinces:6,
               target_provinces:38,
               regions:[
                 {key:"aceh",name:"Aceh",level:"provinsi",available:true,count:($ac[0].result.count//0),items:($ac[0].result.results//[])},
@@ -176,10 +179,11 @@ jobs:
                 {key:"sumsel",name:"Sumatera Selatan",level:"provinsi",available:true,count:($ss[0].result.count//0),items:($ss[0].result.results//[])},
                 {key:"banten",name:"Banten",level:"provinsi",available:true,count:($b[0].result.count//0),items:($b[0].result.results//[])},
                 {key:"jateng",name:"Jawa Tengah",level:"provinsi",available:true,count:($jt[0].result.count//0),items:($jt[0].result.results//[])},
+                {key:"kaltim",name:"Kalimantan Timur",level:"provinsi",available:true,count:($kt[0].result.count//0),items:($kt[0].result.results//[])},
                 {key:"grobogan",name:"Kabupaten Grobogan",level:"kabupaten",available:true,count:($g[0].result.count//0),items:($g[0].result.results//[])}
               ]
             }' > live/regional-summary.json
-          jq -e '.verified_provinces==5 and ([.regions[]|select(.level=="provinsi")]|length)==5' live/regional-summary.json >/dev/null
+          jq -e '.verified_provinces==6 and ([.regions[]|select(.level=="provinsi")]|length)==6' live/regional-summary.json >/dev/null
 
           # Direct statistical indicators from verified public CKAN datasets
           fetch_indicator () {
@@ -193,6 +197,7 @@ jobs:
             sb="tmp-domains/indicator-${slug}-sumbar.json"
             ss="tmp-domains/indicator-${slug}-sumsel.json"
             jt="tmp-domains/indicator-${slug}-jateng.json"
+            kt="tmp-domains/indicator-${slug}-kaltim.json"
 
             curl_json_optional "https://data.bantenprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$b"
             curl_json_optional "https://opendata.grobogan.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$g"
@@ -200,17 +205,18 @@ jobs:
             curl_json_optional "https://data.sumbarprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$sb"
             curl_json_optional "https://opendata.sumselprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$ss"
             curl_json_optional "https://data.jatengprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$jt"
+            curl_json_optional "https://data.kaltimprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$kt"
 
             jq -n --arg slug "$slug" --arg query "$query" \
               --slurpfile b "$b" --slurpfile g "$g" --slurpfile ac "$ac" \
-              --slurpfile sb "$sb" --slurpfile ss "$ss" --slurpfile jt "$jt" '
+              --slurpfile sb "$sb" --slurpfile ss "$ss" --slurpfile jt "$jt" --slurpfile kt "$kt" '
               {
                 indicator:$slug,
                 query:$query,
                 matches:(
                   ($b[0].result.count//0)+($g[0].result.count//0)+
                   ($ac[0].result.count//0)+($sb[0].result.count//0)+
-                  ($ss[0].result.count//0)+($jt[0].result.count//0)
+                  ($ss[0].result.count//0)+($jt[0].result.count//0)+($kt[0].result.count//0)
                 ),
                 sources:{
                   banten:($b[0].result.count//0),
@@ -218,6 +224,7 @@ jobs:
                   sumbar:($sb[0].result.count//0),
                   sumsel:($ss[0].result.count//0),
                   jateng:($jt[0].result.count//0),
+                  kaltim:($kt[0].result.count//0),
                   grobogan:($g[0].result.count//0)
                 },
                 datasets:(
@@ -227,6 +234,7 @@ jobs:
                     [$sb[0].result.results[]? | . + {source:"Sumatera Barat",source_key:"sumbar"}] +
                     [$ss[0].result.results[]? | . + {source:"Sumatera Selatan",source_key:"sumsel"}] +
                     [$jt[0].result.results[]? | . + {source:"Jawa Tengah",source_key:"jateng"}] +
+                    [$kt[0].result.results[]? | . + {source:"Kalimantan Timur",source_key:"kaltim"}] +
                     [$g[0].result.results[]? | . + {source:"Grobogan",source_key:"grobogan"}]
                   )
                   | sort_by(.metadata_modified//"")
@@ -529,7 +537,8 @@ jobs:
               "aceh_ckan": true,
               "sumbar_ckan": true,
               "sumsel_ckan": true,
-              "jateng_ckan": true
+              "jateng_ckan": true,
+              "kaltim_ckan": true
             },
             "metrics": {
               "big_features": $(jq -r '.count' live/big-village-count.json),
