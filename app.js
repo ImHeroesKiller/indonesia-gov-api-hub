@@ -330,9 +330,15 @@ function catalogName(key){
 }
 
 function catalogBase(key){
-  return key==='banten'
-    ?'https://data.bantenprov.go.id/dataset/'
-    :'https://opendata.grobogan.go.id/dataset/';
+  const bases={
+    banten:'https://data.bantenprov.go.id/dataset/',
+    grobogan:'https://opendata.grobogan.go.id/dataset/',
+    aceh:'https://data.acehprov.go.id/id/dataset/',
+    sumbar:'https://data.sumbarprov.go.id/dataset/',
+    sumsel:'https://opendata.sumselprov.go.id/dataset/',
+    jateng:'https://data.jatengprov.go.id/dataset/'
+  };
+  return bases[key]||'#';
 }
 
 function datasetCard(d,key){
@@ -702,15 +708,32 @@ function statCard(label,value,meta,note=''){
   '</article>';
 }
 
-function renderRegionalCoverage(){
-  const el=$('#regionalCoverage'); if(!el)return;
-  const regions=state.regionalSummary?.regions||[];
-  el.innerHTML=regions.map(r=>{
+function regionalCardMarkup(regions){
+  return regions.map(r=>{
     const latest=[...(r.items||[])].sort((a,b)=>new Date(b.metadata_modified||0)-new Date(a.metadata_modified||0))[0];
-    return '<article class="regional-coverage-card"><div><span>'+esc(r.name)+'</span><strong>'+fmt(r.count)+'</strong></div><small>dataset publik</small><p>'+esc(latest?.title||'Katalog public REST aktif')+'</p></article>';
+    return '<article class="regional-coverage-card">'+
+      '<div><span>'+esc(r.name)+'</span><strong>'+fmt(r.count)+'</strong></div>'+
+      '<small>'+esc(r.level==='provinsi'?'Provinsi':'Kabupaten')+' · REST verified</small>'+
+      '<p>'+esc(latest?.title||'Katalog public REST aktif')+'</p>'+
+    '</article>';
   }).join('');
 }
-async function loadRegionalCoverage(){try{state.regionalSummary=await json(LIVE.regionalSummary,15000)}catch{state.regionalSummary={regions:[]}} renderRegionalCoverage()}
+function renderRegionalCoverage(){
+  const regions=state.regionalSummary?.regions||[];
+  const provinces=regions.filter(r=>r.level==='provinsi'&&r.available!==false);
+  const total=provinces.reduce((sum,r)=>sum+(Number(r.count)||0),0);
+  const detail=$('#regionalCoverage');
+  if(detail)detail.innerHTML=regionalCardMarkup(regions);
+  const dash=$('#dashboardRegionalCoverage');
+  if(dash)dash.innerHTML=regionalCardMarkup(provinces);
+  setText('#dashboardProvinceCoverage',fmt(provinces.length)+'/38');
+  setText('#dashboardRegionalDatasets',fmt(total));
+}
+async function loadRegionalCoverage(){
+  try{state.regionalSummary=await json(LIVE.regionalSummary,15000)}
+  catch{state.regionalSummary={regions:[]}}
+  renderRegionalCoverage();
+}
 
 function renderDirectStats(){
   const d=state.directStats;
@@ -873,7 +896,11 @@ const sourceStatusKey={
   'jakarta-transport':'jakarta_transport',
   'jakarta-roads':'jakarta_roads',
   'jakarta-rdtr':'jakarta_rdtr',
-  'esdm-migas':'esdm_migas'
+  'esdm-migas':'esdm_migas',
+  'aceh-ckan':'aceh_ckan',
+  'sumbar-ckan':'sumbar_ckan',
+  'sumsel-ckan':'sumsel_ckan',
+  'jateng-ckan':'jateng_ckan'
 };
 
 function setText(id,value){
@@ -894,7 +921,9 @@ function snapshotAge(v){
 }
 
 function renderDashboard(){
-  const datasetTotal=(state.catalogs.banten.count||0)+(state.catalogs.grobogan.count||0);
+  const provinceRegions=(state.regionalSummary?.regions||[]).filter(r=>r.level==='provinsi'&&r.available!==false);
+  const datasetTotal=provinceRegions.reduce((sum,r)=>sum+(Number(r.count)||0),0)||
+    ((state.catalogs.banten.count||0)+(state.catalogs.grobogan.count||0));
   const pamRows=state.pamComplaints.map(x=>x.attributes||{});
   const pamTotal=pamRows.reduce((sum,a)=>sum+(Number(a.sum_keluha??a.SUM_Keluha)||0),0);
 
@@ -958,10 +987,10 @@ function renderDashboard(){
     ).join('');
   }
 
-  const datasets=[
-    ...state.catalogs.banten.items.map(d=>({...d,_source:'Banten',_key:'banten'})),
-    ...state.catalogs.grobogan.items.map(d=>({...d,_source:'Grobogan',_key:'grobogan'}))
-  ].sort((a,b)=>new Date(b.metadata_modified||0)-new Date(a.metadata_modified||0)).slice(0,6);
+  const datasets=(state.regionalSummary?.regions||[])
+    .flatMap(r=>(r.items||[]).map(d=>({...d,_source:r.name,_key:r.key})))
+    .sort((x,y)=>new Date(y.metadata_modified||0)-new Date(x.metadata_modified||0))
+    .slice(0,8);
 
   const datasetFeed=$('#dashboardDatasets');
   if(datasetFeed){
