@@ -12,57 +12,45 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify PELNI public endpoints and inspect MRT relative API
+      - name: Discover ASDP KAI LRT public JSON calls
         shell: bash
         run: |
           set +e
           work=$(mktemp -d)
 
-          req () {
+          inspect () {
             name="$1"
-            method="$2"
-            url="$3"
-            data="$4"
+            url="$2"
             echo "===== $name ====="
-            tmp=$(mktemp)
-            if [ "$method" = "POST" ]; then
-              code=$(curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0 NusaData-Probe"                 -H "Accept: application/json,text/plain,*/*"                 -H "X-Requested-With: XMLHttpRequest"                 -X POST --data "$data"                 -sS -w "%{http_code}" -o "$tmp" "$url")
-            else
-              code=$(curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0 NusaData-Probe"                 -H "Accept: application/json,text/plain,*/*"                 -sS -w "%{http_code}" -o "$tmp" "$url")
-            fi
-            echo "HTTP=$code"
-            echo "MIME=$(file -b --mime-type "$tmp" 2>/dev/null)"
-            if jq -e . "$tmp" >/dev/null 2>&1; then
-              echo "JSON=valid"
-              jq -c 'if type=="object" then keys else type end' "$tmp" | head -c 600
-              echo
-              jq -c '.' "$tmp" | head -c 2000
-              echo
-            else
-              echo "JSON=invalid"
-              head -c 1200 "$tmp"
-              echo
-            fi
-            rm -f "$tmp"
+            out="$3"
+            curl -L --connect-timeout 8 --max-time 25 -A "Mozilla/5.0 NusaData-Probe" -sS "$url" -o "$out"
+            echo "size=$(wc -c < "$out" 2>/dev/null)"
           }
 
-          req "PELNI getorg GET" GET "https://pelni.co.id/getorg" ""
-          req "PELNI getorg POST" POST "https://pelni.co.id/getorg" ""
-          req "PELNI getdes POST empty" POST "https://pelni.co.id/getdes" ""
-          req "PELNI getclass POST empty" POST "https://pelni.co.id/getclass" ""
+          inspect "ASDP commercial routes" "https://www.asdp.id/peta-lintasan-komersil" "$work/asdp.html"
+          echo "-- ASDP URL refs --"
+          grep -Eo 'https?://[^"'\'' <>()]+' "$work/asdp.html" | grep -Ei '(api|json|ajax|route|rute|lintasan|schedule|jadwal)' | sort -u | head -n 120 || true
+          echo "-- ASDP ajax/fetch contexts --"
+          grep -Eo '.{0,180}(fetch\(|axios|\$\.ajax|ajax\(|url[[:space:]]*:).{0,300}' "$work/asdp.html" | head -n 120 || true
+          echo "-- ASDP scripts --"
+          grep -Eo '<script[^>]+src=["'\''][^"'\'']+' "$work/asdp.html" | sed -E 's/.*src=["'\'']//' | head -n 40 || true
 
-          echo "===== PELNI FORM OPTION SAMPLE ====="
-          curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0" -sS https://pelni.co.id/reservasi-tiket -o "$work/pelni.html"
-          grep -n -A12 -B4 'getorg' "$work/pelni.html" | head -n 100 || true
-          grep -Eo '<option[^>]+value="[^"]+"[^>]*>[^<]+' "$work/pelni.html" | head -n 50 || true
+          inspect "KAI homepage" "https://www.kai.id/" "$work/kai.html"
+          grep -Eo '/_next/static/chunks/[^"'\'' ]+\.js' "$work/kai.html" | sort -u | head -n 35 > "$work/kai-scripts.txt"
+          : > "$work/kai.js"
+          while read -r p; do
+            curl -L --connect-timeout 5 --max-time 10 -A "Mozilla/5.0" -sS "https://www.kai.id$p" >> "$work/kai.js"
+            echo >> "$work/kai.js"
+          done < "$work/kai-scripts.txt"
+          echo "-- KAI likely API contexts --"
+          grep -Eo '.{0,160}(hello-bar|publikasi|artikel|berita|media|msvc-webcorp).{0,280}' "$work/kai.js" | grep -Ei '(api|fetch|axios|get\(|post\()' | head -n 100 || true
+          echo "-- KAI URL/string fragments --"
+          strings "$work/kai.js" | grep -Eo '["'\''][A-Za-z0-9_./?=&:{}-]{4,}["'\'']' | grep -Ei '(hello|artikel|berita|publikasi|news|media|api)' | sort -u | head -n 120 || true
 
-          echo "===== MRT relative API strings ====="
-          curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0" -sS https://jakartamrt.co.id/ -o "$work/mrt.html"
-          mrtjs=$(grep -Eo '/assets/index-[^"'\'' ]+\.js' "$work/mrt.html" | head -n1)
-          if [ -n "$mrtjs" ]; then
-            curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0" -sS "https://jakartamrt.co.id$mrtjs" -o "$work/mrt.js"
-            echo "-- relative /api strings --"
-            grep -Eo '["'\''][^"'\'']*(/api/|api/)[^"'\'']*["'\'']' "$work/mrt.js" | sort -u | head -n 80 || true
-            echo "-- baseURL contexts --"
-            grep -Eo '.{0,120}(baseURL|axios\.create|VITE_|API_URL|apiUrl).{0,220}' "$work/mrt.js" | head -n 80 || true
-          fi
+          inspect "LRT Jakarta" "https://www.lrtjakarta.co.id/" "$work/lrt.html"
+          echo "-- LRT API refs --"
+          grep -Eo 'https?://[^"'\'' <>()]+' "$work/lrt.html" | grep -Ei '(api|json|ajax|station|stasiun|schedule|jadwal)' | sort -u | head -n 100 || true
+          echo "-- LRT ajax/fetch contexts --"
+          grep -Eo '.{0,180}(fetch\(|axios|\$\.ajax|ajax\(|url[[:space:]]*:).{0,300}' "$work/lrt.html" | head -n 100 || true
+          echo "-- LRT scripts --"
+          grep -Eo '<script[^>]+src=["'\''][^"'\'']+' "$work/lrt.html" | sed -E 's/.*src=["'\'']//' | head -n 40 || true
