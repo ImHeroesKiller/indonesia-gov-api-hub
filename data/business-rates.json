@@ -1,0 +1,247 @@
+{
+  "updated_at": "2026-09-21",
+  "scope": "business-cost-compliance",
+  "currency": "IDR",
+  "tax": {
+    "corporate": {
+      "general_rate": 0.22,
+      "section31e_reduced_rate": 0.11,
+      "full_relief_turnover_max": 4800000000,
+      "relief_turnover_ceiling": 50000000000,
+      "note": "Pasal 31E: pengurangan tarif 50% atas bagian Penghasilan Kena Pajak yang terkait omzet sampai Rp4,8 miliar bagi WP badan dengan omzet sampai Rp50 miliar."
+    },
+    "umkm_final": {
+      "rate": 0.005,
+      "turnover_max": 4800000000,
+      "individual_tax_free_turnover": 500000000,
+      "eligible": [
+        "Orang Pribadi",
+        "Perseroan Perorangan",
+        "Koperasi"
+      ],
+      "note": "PP 20/2026 mempersempit penerima PPh Final UMKM 0,5%. PT biasa, CV, firma, dan BUMDes/BUMDesma tidak lagi menjadi penerima baru skema ini."
+    },
+    "vat": {
+      "statutory_rate": 0.12,
+      "non_luxury_dpp_fraction": 0.9166666666666666,
+      "non_luxury_effective_rate": 0.11,
+      "luxury_effective_rate": 0.12
+    },
+    "pph23": {
+      "services_and_asset_rent_rate": 0.02,
+      "interest_royalty_award_rate": 0.15
+    },
+    "pph22_import": {
+      "api_rate": 0.025,
+      "non_api_rate": 0.075
+    }
+  },
+  "bpjs": {
+    "health": {
+      "employer_rate": 0.04,
+      "employee_rate": 0.01,
+      "wage_ceiling": 12000000,
+      "note": "PPU: total 5%, 4% pemberi kerja + 1% pekerja. Batas atas dasar upah Rp12 juta."
+    },
+    "employment": {
+      "jht": {
+        "employer_rate": 0.037,
+        "employee_rate": 0.02
+      },
+      "jp": {
+        "employer_rate": 0.02,
+        "employee_rate": 0.01,
+        "wage_ceiling_current": 11086300,
+        "effective_from": "2026-03-01",
+        "previous_ceiling": 10547400
+      },
+      "jkm": {
+        "employer_rate": 0.003
+      },
+      "jkk": {
+        "rates": [
+          {
+            "key": "very_low",
+            "label": "Sangat rendah",
+            "rate": 0.0024
+          },
+          {
+            "key": "low",
+            "label": "Rendah",
+            "rate": 0.0054
+          },
+          {
+            "key": "medium",
+            "label": "Sedang",
+            "rate": 0.0089
+          },
+          {
+            "key": "high",
+            "label": "Tinggi",
+            "rate": 0.0127
+          },
+          {
+            "key": "very_high",
+            "label": "Sangat tinggi",
+            "rate": 0.0174
+          }
+        ]
+      },
+      "jkp": {
+        "additional_employer_rate": 0,
+        "note": "Tidak ada tambahan iuran langsung; berasal dari pemerintah dan rekomposisi iuran program lain."
+      }
+    }
+  },
+  "wages_2026": [
+    {
+      "key": "dki-jakarta",
+      "region": "DKI Jakarta",
+      "type": "UMP",
+      "value": 5729876,
+      "sectoral": null,
+      "official": true,
+      "source": "https://www.jakarta.go.id/siaran-pers/6328-SP-HMS-12-2025"
+    },
+    {
+      "key": "kota-bekasi",
+      "region": "Kota Bekasi",
+      "type": "UMK",
+      "value": 5999443,
+      "sectoral": 6028033,
+      "sectoral_label": "UMSK 2026",
+      "official": true,
+      "source": "https://jabarprov.go.id/berita/pemdaprov-jabar-tetapkan-umk-dan-umsk-di-provinsi-jawa-barat-tahun-2026-22619"
+    },
+    {
+      "key": "kab-bekasi",
+      "region": "Kabupaten Bekasi",
+      "type": "UMK",
+      "value": 5938885,
+      "sectoral": 5941759,
+      "sectoral_label": "UMSK 2026",
+      "official": true,
+      "source": "https://jabarprov.go.id/berita/pemdaprov-jabar-tetapkan-umk-dan-umsk-di-provinsi-jawa-barat-tahun-2026-22619"
+    },
+    {
+      "key": "karawang",
+      "region": "Kabupaten Karawang",
+      "type": "UMK",
+      "value": 5886853,
+      "sectoral": 5910371,
+      "sectoral_label": "UMSK 2026",
+      "official": true,
+      "source": "https://jabarprov.go.id/berita/pemdaprov-jabar-tetapkan-umk-dan-umsk-di-provinsi-jawa-barat-tahun-2026-22619"
+    },
+    {
+      "key": "kota-tangerang",
+      "region": "Kota Tangerang",
+      "type": "UMK",
+      "value": 5399405.69,
+      "sectoral": null,
+      "official": true,
+      "source": "https://ppid.bantenprov.go.id/storage/document/kepgub-banten-upah-minimum-kabupaten-dan-kota-tahun-2026-202512241557.pdf"
+    },
+    {
+      "key": "kab-tangerang",
+      "region": "Kabupaten Tangerang",
+      "type": "UMK",
+      "value": 5210377,
+      "sectoral": null,
+      "official": true,
+      "source": "https://ppid.bantenprov.go.id/storage/document/kepgub-banten-upah-minimum-kabupaten-dan-kota-tahun-2026-202512241557.pdf"
+    },
+    {
+      "key": "tangerang-selatan",
+      "region": "Kota Tangerang Selatan",
+      "type": "UMK",
+      "value": 5247870,
+      "sectoral": null,
+      "official": true,
+      "source": "https://ppid.bantenprov.go.id/storage/document/kepgub-banten-upah-minimum-kabupaten-dan-kota-tahun-2026-202512241557.pdf"
+    },
+    {
+      "key": "cilegon",
+      "region": "Kota Cilegon",
+      "type": "UMK",
+      "value": 5469922.59,
+      "sectoral": null,
+      "official": true,
+      "source": "https://ppid.bantenprov.go.id/storage/document/kepgub-banten-upah-minimum-kabupaten-dan-kota-tahun-2026-202512241557.pdf"
+    },
+    {
+      "key": "kab-serang",
+      "region": "Kabupaten Serang",
+      "type": "UMK",
+      "value": 5178521.19,
+      "sectoral": null,
+      "official": true,
+      "source": "https://ppid.bantenprov.go.id/storage/document/kepgub-banten-upah-minimum-kabupaten-dan-kota-tahun-2026-202512241557.pdf"
+    },
+    {
+      "key": "kota-serang",
+      "region": "Kota Serang",
+      "type": "UMK",
+      "value": 4665927.94,
+      "sectoral": null,
+      "official": true,
+      "source": "https://ppid.bantenprov.go.id/storage/document/kepgub-banten-upah-minimum-kabupaten-dan-kota-tahun-2026-202512241557.pdf"
+    },
+    {
+      "key": "pandeglang",
+      "region": "Kabupaten Pandeglang",
+      "type": "UMK",
+      "value": 3360078.06,
+      "sectoral": null,
+      "official": true,
+      "source": "https://ppid.bantenprov.go.id/storage/document/kepgub-banten-upah-minimum-kabupaten-dan-kota-tahun-2026-202512241557.pdf"
+    },
+    {
+      "key": "lebak",
+      "region": "Kabupaten Lebak",
+      "type": "UMK",
+      "value": 3330010.62,
+      "sectoral": null,
+      "official": true,
+      "source": "https://ppid.bantenprov.go.id/storage/document/kepgub-banten-upah-minimum-kabupaten-dan-kota-tahun-2026-202512241557.pdf"
+    }
+  ],
+  "sources": [
+    {
+      "name": "DJP — PPh Badan / PP 20 2026",
+      "url": "https://www.pajak.go.id/id/artikel/badan-usaha-justru-tidak-terbebani-dengan-pp-202026-ini-penjelasannya"
+    },
+    {
+      "name": "DJP — PMK 131/2024 PPN",
+      "url": "https://pajak.go.id/index.php/id/artikel/pmk-1312024-tarif-ppn-sebelas-dua-belas"
+    },
+    {
+      "name": "DJP — PPh 23/26",
+      "url": "https://stats.pajak.go.id/id/pph-pasal-2326"
+    },
+    {
+      "name": "DJP — PPh Pasal 22",
+      "url": "https://www.pajak.go.id/pph-pasal-22"
+    },
+    {
+      "name": "BPJS Ketenagakerjaan — Penerima Upah",
+      "url": "https://www.bpjsketenagakerjaan.go.id/penerima-upah.html"
+    },
+    {
+      "name": "Perpres 64/2020 — BPJS Kesehatan",
+      "url": "https://peraturan.bpk.go.id/Download/127554/Perpres%20Nomor%2064%20Tahun%202020.pdf"
+    },
+    {
+      "name": "Pemprov DKI — UMP 2026",
+      "url": "https://www.jakarta.go.id/siaran-pers/6328-SP-HMS-12-2025"
+    },
+    {
+      "name": "Pemprov Jabar — UMK/UMSK 2026",
+      "url": "https://jabarprov.go.id/berita/pemdaprov-jabar-tetapkan-umk-dan-umsk-di-provinsi-jawa-barat-tahun-2026-22619"
+    },
+    {
+      "name": "Pemprov Banten — UMK 2026",
+      "url": "https://ppid.bantenprov.go.id/storage/document/kepgub-banten-upah-minimum-kabupaten-dan-kota-tahun-2026-202512241557.pdf"
+    }
+  ]
+}
