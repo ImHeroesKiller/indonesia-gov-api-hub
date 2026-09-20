@@ -12,35 +12,27 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe CKAN statistical datasets
+      - name: Find direct public datastore resources
         shell: bash
         run: |
-          set +e
+          set -e
 
-          inspect_ckan () {
+          inspect () {
             base="$1"; label="$2"; query="$3"
             echo "===== $label :: $query ====="
             tmp=$(mktemp)
-            curl -L --connect-timeout 10 --max-time 30 -A "NusaData-Probe/1.0" -sS               "$base/api/3/action/package_search?q=$query&rows=5" -o "$tmp"
-            if jq -e '.success==true' "$tmp" >/dev/null 2>&1; then
-              jq -c '.result.results[] | {
-                name,title,modified:.metadata_modified,
-                resources:[.resources[]? | {id,name,format,datastore_active,url}]
-              }' "$tmp" | head -n 15
-            else
-              echo "invalid"
-            fi
-            rm -f "$tmp"
+            curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -sS               "$base/api/3/action/package_search?q=$query&rows=8" -o "$tmp"
+            jq -e '.success==true' "$tmp" >/dev/null
+            jq -c '.result.results[] | {
+              name,title,modified:.metadata_modified,
+              resources:[.resources[]? | select(.datastore_active==true or (.format|ascii_downcase)=="json" or (.format|ascii_downcase)=="csv") | {id,name,format,datastore_active,url}]
+            } | select(.resources|length>0)' "$tmp" | head -n 24
           }
 
-          for q in inflasi pengangguran kemiskinan apbd sekolah puskesmas sampah produksi%20padi; do
-            inspect_ckan "https://data.bantenprov.go.id" "BANTEN" "$q"
+          for q in inflasi pengangguran kemiskinan apbd sekolah puskesmas sampah "produksi%20padi"; do
+            inspect "https://data.bantenprov.go.id" "BANTEN" "$q"
           done
 
-          for q in inflasi pengangguran kemiskinan apbd sekolah puskesmas sampah produksi%20padi; do
-            inspect_ckan "https://opendata.grobogan.go.id" "GROBOGAN" "$q"
-          done
-
-          for q in inflasi pengangguran kemiskinan apbd sekolah puskesmas sampah produksi%20padi; do
-            inspect_ckan "https://opendata.majalengkakab.go.id" "MAJALENGKA" "$q"
+          for q in inflasi pengangguran kemiskinan apbd sekolah puskesmas sampah "produksi%20padi"; do
+            inspect "https://opendata.grobogan.go.id" "GROBOGAN" "$q"
           done
