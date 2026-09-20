@@ -12,34 +12,47 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify PLN public content REST
+      - name: Probe Food Station useful routes and KAI API paths
         shell: bash
         run: |
           set +e
+
           probe () {
-            name="$1"
-            url="$2"
+            name="$1"; url="$2"
             echo "===== $name ====="
             tmp=$(mktemp)
-            code=$(curl -L --retry 1 --connect-timeout 10 --max-time 25               -A "NusaData-Probe/1.0" -H "Accept: application/json"               -sS -w "%{http_code}" -o "$tmp" "$url")
-            echo "HTTP=$code"
-            echo "MIME=$(file -b --mime-type "$tmp" 2>/dev/null)"
+            code=$(curl -L --retry 1 --connect-timeout 10 --max-time 25               -A "Mozilla/5.0 NusaData-Probe/1.0"               -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "$url")
+            echo "HTTP=$code BYTES=$(wc -c < "$tmp")"
             if jq -e . "$tmp" >/dev/null 2>&1; then
               echo "JSON=valid"
-              jq -c 'if type=="object" then keys else type end' "$tmp" | head -c 800
+              jq -c 'if type=="object" then keys elif type=="array" then {"type":"array","length":length} else type end' "$tmp" | head -c 1200
               echo
-              jq -c '.' "$tmp" | head -c 2600
+              jq -c '.' "$tmp" | head -c 2200
               echo
             else
               echo "JSON=invalid"
-              head -c 700 "$tmp"
-              echo
+              head -c 400 "$tmp" | tr '\n' ' '; echo
             fi
             rm -f "$tmp"
           }
 
-          probe "PLN WP REST root" "https://web.pln.co.id/wp-json/"
-          probe "PLN public posts" "https://web.pln.co.id/wp-json/wp/v2/posts?per_page=10&_fields=id,date,modified,link,title,excerpt"
-          probe "PLN media" "https://web.pln.co.id/wp-json/wp/v2/media?per_page=5&_fields=id,date,link,slug"
-          probe "ASDP WP REST root" "https://www.asdp.id/wp-json/"
-          probe "Pelindo WP REST root" "https://pelindo.co.id/wp-json/"
+          probe "Food Station Beras Berkawan" "https://foodstation.id/wp-json/food-station-utility/v1/beras-berkawan"
+          probe "Food Station Store products" "https://foodstation.id/wp-json/wc/store/products?per_page=10"
+          probe "Food Station Store v1 products" "https://foodstation.id/wp-json/wc/store/v1/products?per_page=10"
+
+          probe "KAI cms-article" "https://api.kai.id/msvc-webcorp/cms-article"
+          probe "KAI news-list" "https://api.kai.id/msvc-webcorp/news-list"
+          probe "KAI cms article news-list" "https://api.kai.id/msvc-webcorp/cms-article/news-list"
+          probe "KAI v1 cms-article" "https://api.kai.id/msvc-webcorp/v1/cms-article"
+          probe "KAI v1 news-list" "https://api.kai.id/msvc-webcorp/v1/news-list"
+
+          echo "===== KAI cms-article code contexts ====="
+          work=$(mktemp -d)
+          curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0" -sS             "https://www.kai.id/publikasi/artikel-berita" -o "$work/page.html"
+          grep -Eo '/_next/static/chunks/[^" '\''<>]+\.js' "$work/page.html" | sort -u > "$work/scripts.txt"
+          : > "$work/all.js"
+          while read -r p; do
+            curl -L --connect-timeout 6 --max-time 15 -A "Mozilla/5.0" -sS "https://www.kai.id$p" >> "$work/all.js"
+            echo >> "$work/all.js"
+          done < "$work/scripts.txt"
+          grep -Eo '.{0,650}(cms-article|news-list).{0,1000}' "$work/all.js" | head -n 120 || true
