@@ -4,27 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0d1728">
-  <meta name="description" content="NusaData — portal terpadu untuk melihat data publik pemerintah Indonesia secara langsung.">
-  <title>NusaData — Portal Data Pemerintah Indonesia</title>
+  <meta name="description" content="NusaData — portal data pemerintah Indonesia dari REST API publik tanpa autentikasi.">
+  <title>NusaData — Public Government Data</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+
   <header class="topbar">
     <button class="brand plain-button" data-route="dashboard" aria-label="NusaData">
       <span class="brand-mark">N</span>
-      <span><strong>NusaData</strong><small>Government Data Portal</small></span>
+      <span><strong>NusaData</strong><small>Public REST Data Portal</small></span>
     </button>
+
     <nav class="desktop-nav" aria-label="Navigasi utama">
       <button class="nav-item active" data-route="dashboard">Dashboard</button>
       <button class="nav-item" data-route="weather">Cuaca</button>
       <button class="nav-item" data-route="earthquake">Gempa</button>
-      <button class="nav-item" data-route="datasets">Dataset</button>
       <button class="nav-item" data-route="sources">Sumber</button>
     </nav>
+
     <div class="header-actions">
+      <span class="status-chip">PUBLIC REST ONLY</span>
       <span id="liveClock" class="live-clock"></span>
       <button id="refreshAll" class="icon-button" title="Muat ulang data" aria-label="Muat ulang data">↻</button>
       <button id="themeToggle" class="icon-button" title="Ubah tema" aria-label="Ubah tema"><span class="sun">☀</span><span class="moon">☾</span></button>
@@ -35,33 +38,39 @@
     <section class="view active" data-view="dashboard">
       <div class="hero-data panel">
         <div>
-          <span class="eyebrow"><i></i> LIVE GOVERNMENT DATA</span>
-          <h1>Data pemerintah, <span>bukan daftar API.</span></h1>
-          <p>NusaData mengambil data publik langsung dari sumber pemerintah dan menyajikannya sebagai informasi yang bisa dibaca: cuaca, gempa, dataset terbuka, dan statistik yang tersedia tanpa kredensial.</p>
+          <span class="eyebrow"><i></i> VERIFIED PUBLIC REST DATA</span>
+          <h1>Data publik pemerintah, <span>tanpa key & login.</span></h1>
+          <p>Hanya data dari endpoint REST/JSON publik yang dapat diakses tanpa API key, OAuth, login, atau kredensial. Sumber yang gagal validasi otomatis tidak akan dipublikasikan.</p>
           <div class="hero-actions">
             <button class="button primary" data-route="weather">Lihat Cuaca</button>
             <button class="button secondary" data-route="earthquake">Gempa Terkini</button>
           </div>
         </div>
         <div class="source-badge">
-          <span>SUMBER AKTIF</span>
+          <span>SUMBER REST AKTIF</span>
           <strong id="activeSourceCount">—</strong>
-          <small>instansi/portal terhubung</small>
+          <small>endpoint family tervalidasi</small>
         </div>
       </div>
 
       <div class="live-grid">
         <article class="panel live-card weather-card">
-          <div class="card-head"><div><span class="kicker">BMKG · Kemayoran</span><h2>Cuaca saat ini</h2></div><span id="weatherStatus" class="status-chip">Memuat…</span></div>
+          <div class="card-head">
+            <div><span class="kicker">BMKG · PUBLIC REST</span><h2>Cuaca Kemayoran</h2></div>
+            <span id="weatherStatus" class="status-chip">Memuat…</span>
+          </div>
           <div id="weatherNow" class="weather-now skeleton-block"></div>
           <div id="weatherMini" class="mini-forecast"></div>
-          <div class="source-note">Sumber: BMKG · prakiraan diperbarui 2× sehari</div>
+          <div class="source-note">Sumber: BMKG Public Weather API · tanpa autentikasi</div>
         </article>
 
         <article class="panel live-card quake-card">
-          <div class="card-head"><div><span class="kicker">BMKG · Indonesia</span><h2>Gempa terbaru</h2></div><span id="quakeStatus" class="status-chip">Memuat…</span></div>
+          <div class="card-head">
+            <div><span class="kicker">BMKG · PUBLIC JSON</span><h2>Gempa terbaru</h2></div>
+            <span id="quakeStatus" class="status-chip">Memuat…</span>
+          </div>
           <div id="latestQuake" class="quake-main skeleton-block"></div>
-          <div class="source-note">Sumber: BMKG · diperbarui setiap kejadian</div>
+          <div class="source-note">Sumber: BMKG Open Earthquake JSON · tanpa autentikasi</div>
         </article>
       </div>
 
@@ -72,30 +81,17 @@
         </div>
         <div id="dashboardQuakes" class="table-lite"></div>
       </section>
-
-      <section class="panel section-panel">
-        <div class="section-head">
-          <div><span class="kicker">OPEN DATA</span><h2>Dataset pemerintah</h2></div>
-          <button class="text-button" data-route="datasets">Cari dataset →</button>
-        </div>
-        <div id="dashboardDatasets" class="dataset-grid">
-          <div class="empty-inline">Mencoba mengambil dataset terbaru dari portal data terbuka…</div>
-        </div>
-      </section>
     </section>
 
     <section class="view" data-view="weather">
       <div class="page-heading">
-        <div><span class="eyebrow"><i></i> BMKG WEATHER</span><h1>Prakiraan Cuaca</h1><p>Data prakiraan 3 harian per kelurahan/desa dari BMKG.</p></div>
-      </div>
-      <section class="panel control-panel">
-        <div class="location-control">
-          <label><span>Kode wilayah ADM4</span><input id="adm4Input" value="31.71.03.1001" placeholder="31.71.03.1001"></label>
-          <button id="loadWeather" class="button primary">Tampilkan data</button>
-          <button id="useKemayoran" class="button secondary">Kemayoran</button>
+        <div>
+          <span class="eyebrow"><i></i> BMKG PUBLIC WEATHER REST API</span>
+          <h1>Prakiraan Cuaca</h1>
+          <p>Prakiraan 3 harian dari endpoint publik BMKG. Tidak memakai API key atau login.</p>
         </div>
-        <p class="helper">Gunakan kode wilayah tingkat IV Kemendagri. Default: Kelurahan Kemayoran, Jakarta Pusat.</p>
-      </section>
+      </div>
+
       <section class="panel section-panel">
         <div id="weatherLocation" class="location-title"></div>
         <div id="weatherDetail" class="weather-timeline"></div>
@@ -104,42 +100,32 @@
 
     <section class="view" data-view="earthquake">
       <div class="page-heading">
-        <div><span class="eyebrow"><i></i> BMKG EARTHQUAKE</span><h1>Gempa Indonesia</h1><p>Gempa terbaru, M5+, dan gempa dirasakan langsung dari feed BMKG.</p></div>
+        <div>
+          <span class="eyebrow"><i></i> BMKG PUBLIC EARTHQUAKE JSON</span>
+          <h1>Gempa Indonesia</h1>
+          <p>Gempa terbaru, M5+, dan gempa dirasakan dari data terbuka BMKG tanpa autentikasi.</p>
+        </div>
       </div>
+
       <div id="quakeHero" class="panel quake-hero"></div>
+
       <div class="tab-row">
         <button class="chip active" data-quake-tab="m5">M5+ terkini</button>
         <button class="chip" data-quake-tab="felt">Gempa dirasakan</button>
       </div>
+
       <section class="panel section-panel">
         <div id="quakeList" class="quake-list"></div>
       </section>
     </section>
 
-    <section class="view" data-view="datasets">
-      <div class="page-heading">
-        <div><span class="eyebrow"><i></i> OPEN DATA SEARCH</span><h1>Cari Data Pemerintah</h1><p>Cari isi katalog data pemerintah, bukan endpoint teknisnya.</p></div>
-      </div>
-      <section class="panel search-panel">
-        <div class="dataset-search">
-          <input id="datasetQuery" type="search" placeholder="Cari: kemiskinan, UMKM, kesehatan, transportasi…">
-          <select id="datasetSource">
-            <option value="all">Semua sumber</option>
-            <option value="jakarta">Satu Data Jakarta</option>
-            <option value="nasional">Satu Data Indonesia</option>
-          </select>
-          <button id="searchDatasets" class="button primary">Cari data</button>
-        </div>
-      </section>
-      <div id="datasetMeta" class="result-meta"></div>
-      <div id="datasetResults" class="dataset-grid results-grid">
-        <div class="empty-state panel"><strong>Masukkan kata kunci</strong><span>Contoh: “kesehatan”, “UMKM”, atau “penduduk”.</span></div>
-      </div>
-    </section>
-
     <section class="view" data-view="sources">
       <div class="page-heading">
-        <div><span class="eyebrow"><i></i> DATA SOURCES</span><h1>Sumber Data</h1><p>API berada di belakang layar. Halaman ini hanya menjelaskan asal, status, dan batas akses data.</p></div>
+        <div>
+          <span class="eyebrow"><i></i> VERIFIED SOURCES</span>
+          <h1>Sumber REST Publik</h1>
+          <p>Hanya sumber tanpa API key, OAuth, login, atau credential yang ditampilkan.</p>
+        </div>
       </div>
       <div id="sourceGrid" class="source-grid"></div>
     </section>
@@ -149,12 +135,15 @@
     <button class="active" data-route="dashboard"><span>⌂</span><small>Dashboard</small></button>
     <button data-route="weather"><span>☁</span><small>Cuaca</small></button>
     <button data-route="earthquake"><span>◉</span><small>Gempa</small></button>
-    <button data-route="datasets"><span>⌕</span><small>Data</small></button>
     <button data-route="sources"><span>▦</span><small>Sumber</small></button>
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <footer class="footer"><span>NusaData · Government Data Portal</span><span>Data bersumber dari instansi pemerintah terkait. NusaData bukan situs resmi pemerintah.</span></footer>
+  <footer class="footer">
+    <span>NusaData · Public REST Data Portal</span>
+    <span>Hanya menggunakan data pemerintah dari endpoint publik tanpa autentikasi.</span>
+  </footer>
+
   <script src="./app.js" defer></script>
 </body>
 </html>
