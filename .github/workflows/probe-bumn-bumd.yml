@@ -12,53 +12,37 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect public sites and API candidates
+      - name: Discover public data endpoints
         shell: bash
         run: |
           set +e
+          work=$(mktemp -d)
 
-          inspect_site () {
-            name="$1"
-            url="$2"
-            echo "===== SITE $name ====="
-            tmp=$(mktemp)
-            curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0 NusaData-Probe" -sS "$url" -o "$tmp"
-            echo "-- api-like refs --"
-            grep -Eo 'https?://[^"'\'' <>)]+' "$tmp" | grep -Ei '(api|json|graphql|rest)' | head -n 30 || true
-            echo "-- script refs --"
-            grep -Eo '<script[^>]+src=["'\''][^"'\'']+' "$tmp" | sed -E 's/.*src=["'\'']//' | head -n 20 || true
-            rm -f "$tmp"
-          }
+          echo "===== KAI PUBLIC WEBSITE API DISCOVERY ====="
+          curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0" -sS https://www.kai.id/ -o "$work/kai.html"
+          grep -Eo '/_next/static/chunks/[^"'\'' ]+\.js' "$work/kai.html" | sort -u | head -n 60 > "$work/kai-scripts.txt"
+          while read -r p; do
+            curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0" -sS "https://www.kai.id$p" >> "$work/kai-js.txt"
+            echo >> "$work/kai-js.txt"
+          done < "$work/kai-scripts.txt"
+          echo "-- msvc-webcorp endpoint strings --"
+          grep -Eo 'https://api\.kai\.id/msvc-webcorp[^"'\'' <>()\\]+' "$work/kai-js.txt" | sed 's/\\$//' | sort -u | head -n 100 || true
+          echo "-- relative endpoint-like strings --"
+          grep -Eo '/msvc-webcorp/[A-Za-z0-9_/?=&.{}:-]+' "$work/kai-js.txt" | sort -u | head -n 100 || true
+          echo "-- article/news related context --"
+          grep -Eo '.{0,120}(artikel|berita|publication|publikasi|news).{0,180}' "$work/kai-js.txt" | grep -Ei '(api|msvc|fetch|axios)' | head -n 40 || true
 
-          probe () {
-            name="$1"
-            url="$2"
-            echo "===== API $name ====="
-            tmp=$(mktemp)
-            code=$(curl -L --retry 1 --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -H "Accept: application/json"               -sS -w "%{http_code}" -o "$tmp" "$url")
-            echo "HTTP=$code"
-            ctype=$(file -b --mime-type "$tmp" 2>/dev/null)
-            echo "MIME=$ctype"
-            if jq -e . "$tmp" >/dev/null 2>&1; then
-              echo "JSON=valid"
-              jq -c 'if type=="object" then keys else type end' "$tmp" | head -c 1000
-              echo
-              jq -c '.' "$tmp" | head -c 2000
-              echo
-            else
-              echo "JSON=invalid"
-              head -c 500 "$tmp"
-              echo
-            fi
-            rm -f "$tmp"
-          }
+          echo "===== MRT PUBLIC WEBSITE JS DISCOVERY ====="
+          curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0" -sS https://jakartamrt.co.id/ -o "$work/mrt.html"
+          mrtjs=$(grep -Eo '/assets/index-[^"'\'' ]+\.js' "$work/mrt.html" | head -n1)
+          if [ -n "$mrtjs" ]; then
+            curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0" -sS "https://jakartamrt.co.id$mrtjs" -o "$work/mrt.js"
+            echo "-- API-like URLs --"
+            grep -Eo 'https?://[^"'\'' <>()]+' "$work/mrt.js" | grep -Ei '(api|json|graphql|rest)' | sort -u | head -n 60 || true
+            echo "-- fetch/axios contexts --"
+            grep -Eo '.{0,120}(fetch|axios|/api/).{0,180}' "$work/mrt.js" | head -n 50 || true
+          fi
 
-          inspect_site "KAI" "https://www.kai.id/"
-          inspect_site "TransJakarta routes" "https://www.transjakarta.co.id/rute"
-          inspect_site "MRT Jakarta" "https://jakartamrt.co.id/"
-          inspect_site "Jasa Marga" "https://www.jasamarga.com/"
-
-          probe "KAI API root" "https://api.kai.id/"
-          probe "TransJakarta API root" "https://api.transjakarta.co.id/"
-          probe "MRT API root" "https://api.jakartamrt.co.id/"
-          probe "Pos Indonesia sandbox docs root" "https://fintech-sbx.posindonesia.co.id/"
+          echo "===== TRANSJAKARTA PUBLIC ROUTE DISCOVERY ====="
+          curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0" -sS https://www.transjakarta.co.id/rute -o "$work/tj.html"
+          grep -Eo '.{0,120}(ajax|fetch|axios|/api/|route|rute).{0,220}' "$work/tj.html" | grep -Ei '(url|ajax|fetch|api)' | head -n 80 || true
