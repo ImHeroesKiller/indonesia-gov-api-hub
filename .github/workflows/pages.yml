@@ -291,8 +291,13 @@ jobs:
                    | {
                        name,
                        price:(
-                         ((.prices.price|tonumber? // 0) /
-                         (10 ^ (.prices.currency_minor_unit|tonumber? // 0)))
+                         (.prices.price|tonumber? // 0) /
+                         (
+                           if (.prices.currency_minor_unit|tonumber? // 0)==3 then 1000
+                           elif (.prices.currency_minor_unit|tonumber? // 0)==2 then 100
+                           elif (.prices.currency_minor_unit|tonumber? // 0)==1 then 10
+                           else 1 end
+                         )
                        ),
                        in_stock:.is_in_stock,
                        permalink
