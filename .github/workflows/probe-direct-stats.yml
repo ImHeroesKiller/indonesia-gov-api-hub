@@ -1,4 +1,4 @@
-name: Probe Direct Statistics
+name: Probe Direct Statistics REST
 
 on:
   push:
@@ -12,9 +12,25 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect hospital beds
+      - name: Probe Banten DataStore resources
         shell: bash
         run: |
-          set -e
-          curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30             -A "NusaData-Probe/1.0" -sS             "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=07164307-c64e-432a-aaac-d27b5196df22&limit=100" |
-            jq -c '{total:.result.total,fields:(.result.fields|map(.id)),records:.result.records}'
+          set +e
+          probe () {
+            name="$1"; id="$2"
+            tmp=$(mktemp)
+            url="https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=$id&limit=2"
+            code=$(curl -L --retry 1 --connect-timeout 8 --max-time 25 -A "NusaData-Probe/1.0" -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "$url")
+            ok=false
+            if jq -e '.success==true and (.result.records|type=="array")' "$tmp" >/dev/null 2>&1; then ok=true; fi
+            echo "$name HTTP=$code VALID=$ok"
+            rm -f "$tmp"
+          }
+          probe "unemployment" "6e533cef-056d-4dbc-a689-8f388d6cb6c7"
+          probe "poverty" "cabba131-d45d-4920-b224-2f0ade451466"
+          probe "revenue" "785712cd-82a9-44ed-a6fe-3d54ec3432c8"
+          probe "smk" "ec8cc1b4-9f87-46fd-98cb-d2aab92fb52a"
+          probe "beds" "07164307-c64e-432a-aaac-d27b5196df22"
+          probe "waste" "143df65f-35ee-4419-91b6-b289e368a488"
+          probe "agriculture" "e3548ec4-68b5-44fc-bd8c-fcf514c2007d"
+          probe "ihk" "60a377b4-d6a0-401f-ad82-dd30e7780393"
