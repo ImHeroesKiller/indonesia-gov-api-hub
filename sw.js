@@ -1,4 +1,4 @@
-const CACHE='nusadata-v6-bumn-bumd-rest';
+const CACHE='nusadata-v6-bumn-bumd';
 
 const CORE=[
   './',
