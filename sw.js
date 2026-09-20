@@ -1,5 +1,14 @@
-const CACHE='nusadata-v3-20260920';
-const CORE=['./','./index.html','./styles.css','./app.js','./data/apis.json','./manifest.webmanifest','./assets/icon.svg'];
+const CACHE='nusadata-v4-public-rest-only';
+
+const CORE=[
+  './',
+  './index.html',
+  './styles.css',
+  './app.js',
+  './data/apis.json',
+  './manifest.webmanifest',
+  './assets/icon.svg'
+];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
