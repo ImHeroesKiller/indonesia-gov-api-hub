@@ -125,7 +125,7 @@
       "name": "Kementerian Perindustrian",
       "role": "Industri",
       "weight": 15,
-      "status": "active",
+      "status": "unreachable",
       "official_url": "https://satudata.kemenperin.go.id/",
       "rest_url": "https://satudata.kemenperin.go.id/id/api/3/action/",
       "target_data": [
@@ -137,7 +137,8 @@
         "EV",
         "industri hijau"
       ],
-      "investment_use": "installed capacity, industrial clustering, downstream opportunity"
+      "investment_use": "installed capacity, industrial clustering, downstream opportunity",
+      "note": "Official CKAN REST is documented and public, but current GitHub/cloud runners cannot reliably resolve/connect to the host. It is excluded from scoring until server-side fetch is healthy."
     }
   ]
 }
