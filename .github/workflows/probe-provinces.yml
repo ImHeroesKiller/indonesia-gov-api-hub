@@ -1,0 +1,69 @@
+name: Probe Provincial Public REST
+
+on:
+  push:
+    paths:
+      - ".github/workflows/probe-provinces.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe official provincial data portals
+        shell: bash
+        run: |
+          set +e
+          probe () {
+            province="$1"; base="$2"
+            echo "===== $province | $base ====="
+            for path in "/api/3/action/package_search?rows=1" "/id/api/3/action/package_search?rows=1"; do
+              tmp=$(mktemp)
+              code=$(curl -L --retry 1 --connect-timeout 8 --max-time 20 -A "NusaData-Probe/1.0" -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "$base$path")
+              ok=false
+              if jq -e '.success==true and (.result.results|type=="array")' "$tmp" >/dev/null 2>&1; then ok=true; fi
+              echo "PATH=$path HTTP=$code JSON=$ok"
+              if [ "$ok" = true ]; then
+                jq -c '{count:.result.count,first:(.result.results[0].title // null)}' "$tmp"
+                rm -f "$tmp"
+                break
+              fi
+              rm -f "$tmp"
+            done
+          }
+
+          probe "Aceh" "https://data.acehprov.go.id"
+          probe "Sumatera Utara" "https://data.sumutprov.go.id"
+          probe "Sumatera Barat" "https://data.sumbarprov.go.id"
+          probe "Riau" "https://data.riau.go.id"
+          probe "Kepulauan Riau" "https://data.kepriprov.go.id"
+          probe "Jambi" "https://data.jambiprov.go.id"
+          probe "Sumatera Selatan" "https://data.sumselprov.go.id"
+          probe "Bangka Belitung" "https://data.babelprov.go.id"
+          probe "Bengkulu" "https://data.bengkuluprov.go.id"
+          probe "Lampung" "https://data.lampungprov.go.id"
+          probe "Banten" "https://data.bantenprov.go.id"
+          probe "Jawa Barat" "https://opendata.jabarprov.go.id"
+          probe "Jawa Tengah" "https://data.jatengprov.go.id"
+          probe "DI Yogyakarta" "https://data.jogjaprov.go.id"
+          probe "Jawa Timur" "https://opendata.jatimprov.go.id"
+          probe "Bali" "https://data.bali.go.id"
+          probe "Nusa Tenggara Barat" "https://data.ntbprov.go.id"
+          probe "Nusa Tenggara Timur" "https://data.nttprov.go.id"
+          probe "Kalimantan Barat" "https://data.kalbarprov.go.id"
+          probe "Kalimantan Tengah" "https://data.kalteng.go.id"
+          probe "Kalimantan Selatan" "https://data.kalselprov.go.id"
+          probe "Kalimantan Timur" "https://data.kaltimprov.go.id"
+          probe "Kalimantan Utara" "https://data.kaltaraprov.go.id"
+          probe "Sulawesi Utara" "https://data.sulutprov.go.id"
+          probe "Gorontalo" "https://data.gorontaloprov.go.id"
+          probe "Sulawesi Tengah" "https://data.sultengprov.go.id"
+          probe "Sulawesi Barat" "https://data.sulbarprov.go.id"
+          probe "Sulawesi Selatan" "https://data.sulselprov.go.id"
+          probe "Sulawesi Tenggara" "https://data.sultraprov.go.id"
+          probe "Maluku" "https://data.malukuprov.go.id"
+          probe "Maluku Utara" "https://data.malutprov.go.id"
+          probe "Papua" "https://data.papua.go.id"
+          probe "Papua Barat" "https://data.papuabaratprov.go.id"
