@@ -82,9 +82,10 @@ jobs:
             query="$2"
             b="tmp-domains/${slug}-banten.json"
             g="tmp-domains/${slug}-grobogan.json"
+            q_enc=$(jq -rn --arg v "$query" '$v|@uri')
 
-            curl_json "https://data.bantenprov.go.id/api/3/action/package_search?q=${query}&rows=6&sort=metadata_modified%20desc" "$b"
-            curl_json "https://opendata.grobogan.go.id/api/3/action/package_search?q=${query}&rows=6&sort=metadata_modified%20desc" "$g"
+            curl_json "https://data.bantenprov.go.id/api/3/action/package_search?q=${q_enc}&rows=6&sort=metadata_modified%20desc" "$b"
+            curl_json "https://opendata.grobogan.go.id/api/3/action/package_search?q=${q_enc}&rows=6&sort=metadata_modified%20desc" "$g"
 
             jq -n \
               --arg domain "$slug" \
@@ -168,9 +169,10 @@ jobs:
             out="live/indicator-${slug}.json"
             b="tmp-domains/indicator-${slug}-b.json"
             g="tmp-domains/indicator-${slug}-g.json"
+            q_enc=$(jq -rn --arg v "$query" '$v|@uri')
 
-            curl_json "https://data.bantenprov.go.id/api/3/action/package_search?q=${query}&rows=8&sort=metadata_modified%20desc" "$b"
-            curl_json "https://opendata.grobogan.go.id/api/3/action/package_search?q=${query}&rows=8&sort=metadata_modified%20desc" "$g"
+            curl_json "https://data.bantenprov.go.id/api/3/action/package_search?q=${q_enc}&rows=8&sort=metadata_modified%20desc" "$b"
+            curl_json "https://opendata.grobogan.go.id/api/3/action/package_search?q=${q_enc}&rows=8&sort=metadata_modified%20desc" "$g"
 
             jq -n --arg slug "$slug" --arg query "$query" --slurpfile b "$b" --slurpfile g "$g" '
               {
