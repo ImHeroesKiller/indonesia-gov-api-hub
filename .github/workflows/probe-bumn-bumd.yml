@@ -12,7 +12,7 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe official endpoints
+      - name: Verify PLN and PAM JAYA public ArcGIS REST
         shell: bash
         run: |
           set +e
@@ -22,41 +22,32 @@ jobs:
             url="$2"
             echo "===== $name ====="
             tmp=$(mktemp)
-            code=$(curl -L --retry 1 --connect-timeout 10 --max-time 25               -A "Mozilla/5.0 NusaData-Probe/1.0"               -H "Accept: application/json"               -sS -w "%{http_code}" -o "$tmp" "$url")
-            ct=$(file -b --mime-type "$tmp" 2>/dev/null)
-            echo "HTTP=$code MIME=$ct BYTES=$(wc -c < "$tmp")"
+            code=$(curl -L --retry 1 --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -H "Accept: application/json"               -sS -w "%{http_code}" -o "$tmp" "$url")
+            echo "HTTP=$code"
             if jq -e . "$tmp" >/dev/null 2>&1; then
               echo "JSON=valid"
-              jq -c 'if type=="object" then keys elif type=="array" then {"type":"array","length":length} else type end' "$tmp" | head -c 1200
+              jq -c 'if type=="object" then keys else type end' "$tmp" | head -c 900
+              echo
+              jq -c '.' "$tmp" | head -c 2800
               echo
             else
               echo "JSON=invalid"
-              head -c 300 "$tmp" | tr '\n' ' '
+              head -c 600 "$tmp"
               echo
             fi
             rm -f "$tmp"
           }
 
-          probe "KAI Stations" "https://booking.kai.id/api/stations2"
-          probe "MRT Jakarta JSONAPI root" "https://jakartamrt.co.id/jsonapi"
-          probe "MRT Jakarta Drupal nodes" "https://jakartamrt.co.id/jsonapi/node"
-          probe "LRT Jakarta WP REST" "https://lrtjakarta.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "PAM Jaya WP REST" "https://pamjaya.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "Pasar Jaya WP REST" "https://pasarjaya.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "Bank DKI WP REST" "https://bankdki.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "Jakpro WP REST" "https://jakpro.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "Food Station WP REST" "https://foodstation.id/wp-json/wp/v2/posts?per_page=3"
-          probe "Jaya Ancol WP REST" "https://www.ancol.com/wp-json/wp/v2/posts?per_page=3"
-          probe "KAI corporate WP REST" "https://www.kai.id/wp-json/wp/v2/posts?per_page=3"
-          probe "KAI Commuter WP REST" "https://commuterline.id/wp-json/wp/v2/posts?per_page=3"
-          probe "PELNI WP REST" "https://www.pelni.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "PLN WP REST" "https://web.pln.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "Pertamina WP REST" "https://www.pertamina.com/wp-json/wp/v2/posts?per_page=3"
-          probe "Pelindo WP REST" "https://pelindo.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "Jasa Marga WP REST" "https://www.jasamarga.com/wp-json/wp/v2/posts?per_page=3"
-          probe "Telkom Indonesia WP REST" "https://www.telkom.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "InJourney Airports WP REST" "https://injourneyairports.id/wp-json/wp/v2/posts?per_page=3"
-          probe "Bank Mandiri WP REST" "https://www.bankmandiri.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "BRI WP REST" "https://bri.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "BNI WP REST" "https://www.bni.co.id/wp-json/wp/v2/posts?per_page=3"
-          probe "BTN WP REST" "https://www.btn.co.id/wp-json/wp/v2/posts?per_page=3"
+          probe "PLN portal info"             "https://maps.pln.co.id/arcgis/sharing/rest/portals/self?f=json"
+
+          probe "PLN public SPKLU search"             "https://maps.pln.co.id/arcgis/sharing/rest/search?q=SPKLU&num=20&f=json"
+
+          probe "PLN public Feature Service search"             "https://maps.pln.co.id/arcgis/sharing/rest/search?q=type%3A%22Feature%20Service%22%20access%3Apublic&num=20&f=json"
+
+          probe "PAM JAYA KELUHAN map metadata"             "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer?f=pjson"
+
+          probe "PAM JAYA aggregate layer metadata"             "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer/3?f=pjson"
+
+          probe "PAM JAYA aggregate complaint count"             "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer/3/query?where=1%3D1&returnCountOnly=true&f=json"
+
+          probe "PAM JAYA aggregate complaint sample"             "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer/3/query?where=1%3D1&outFields=*&returnGeometry=false&resultRecordCount=8&f=json"
