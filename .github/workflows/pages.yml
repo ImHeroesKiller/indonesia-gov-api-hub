@@ -125,6 +125,44 @@ jobs:
           curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "live/esdm-wells-count.json"
           curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "live/esdm-wk2026-count.json"
 
+          # Direct statistical indicators from verified public CKAN datasets
+          fetch_indicator () {
+            slug="$1"
+            query="$2"
+            out="live/indicator-${slug}.json"
+            b="tmp-domains/indicator-${slug}-b.json"
+            g="tmp-domains/indicator-${slug}-g.json"
+
+            curl_json "https://data.bantenprov.go.id/api/3/action/package_search?q=${query}&rows=8&sort=metadata_modified%20desc" "$b"
+            curl_json "https://opendata.grobogan.go.id/api/3/action/package_search?q=${query}&rows=8&sort=metadata_modified%20desc" "$g"
+
+            jq -n --arg slug "$slug" --arg query "$query" --slurpfile b "$b" --slurpfile g "$g" '
+              {
+                indicator:$slug,
+                query:$query,
+                matches:(($b[0].result.count//0)+($g[0].result.count//0)),
+                datasets:(
+                  (
+                    [$b[0].result.results[]? | . + {source:"Banten",source_key:"banten"}] +
+                    [$g[0].result.results[]? | . + {source:"Grobogan",source_key:"grobogan"}]
+                  )
+                  | sort_by(.metadata_modified//"")
+                  | reverse
+                  | .[:8]
+                )
+              }' > "$out"
+          }
+
+          fetch_indicator "inflation" "inflasi"
+          fetch_indicator "food-prices" "harga pangan"
+          fetch_indicator "schools" "sekolah"
+          fetch_indicator "health-facilities" "puskesmas rumah sakit"
+          fetch_indicator "unemployment" "pengangguran"
+          fetch_indicator "poverty" "kemiskinan"
+          fetch_indicator "regional-budget" "APBD"
+          fetch_indicator "environment-quality" "kualitas lingkungan"
+          fetch_indicator "agriculture-production" "produksi pertanian"
+
           # Thematic domain discovery from public CKAN catalogs
           for spec in \
             "education:pendidikan" \
@@ -167,6 +205,21 @@ jobs:
           for f in live/domain-*.json; do
             jq -e '.count >= 0 and (.items|type=="array")' "$f" >/dev/null
           done
+
+          jq -s '
+            {
+              generated_at:(now|todateiso8601),
+              indicators:(
+                map({
+                  key:.indicator,
+                  query:.query,
+                  matches:.matches,
+                  datasets:.datasets
+                })
+              )
+            }' live/indicator-*.json > live/indicator-summary.json
+
+          jq -e '(.indicators|type=="array") and (.indicators|length==9)' live/indicator-summary.json >/dev/null
 
           # Compact cross-domain snapshot for the frontend
           jq -n \
