@@ -10,7 +10,10 @@ const state={
   bigCount:0,
   bigSamples:[],
   catalogs:{banten:{count:0,items:[]},grobogan:{count:0,items:[]}},
-  catalogTab:'banten'
+  catalogTab:'banten',
+  foodstation:[],
+  pamComplaints:[],
+  waskita:[]
 };
 
 const LIVE={
@@ -22,6 +25,9 @@ const LIVE={
   bigSample:'./live/big-village-sample.json',
   banten:'./live/banten-datasets.json',
   grobogan:'./live/grobogan-datasets.json',
+  foodstation:'./live/foodstation-products.json',
+  pamjaya:'./live/pamjaya-complaints.json',
+  waskita:'./live/waskita-posts.json',
   status:'./live/status.json'
 };
 
@@ -409,6 +415,89 @@ async function loadAdditionalData(){
   renderCatalog();
 }
 
+
+function idr(value){
+  const n=Number(value);
+  if(!Number.isFinite(n)||n<=0)return'Harga belum tersedia';
+  return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
+}
+
+function decodeText(v=''){
+  const el=document.createElement('textarea');
+  el.innerHTML=String(v);
+  return el.value.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function renderEnterpriseData(){
+  const food=state.foodstation;
+  const pam=state.pamComplaints;
+  const wk=state.waskita;
+
+  $('#foodstationCount').textContent=fmt(food.length);
+  $('#waskitaCount').textContent=fmt(wk.length);
+
+  const pamRows=pam.map(x=>x.attributes||{});
+  const pamTotal=pamRows.reduce((sum,a)=>sum+(Number(a.sum_keluha??a.SUM_Keluha)||0),0);
+  $('#pamComplaintTotal').textContent=fmt(pamTotal);
+
+  $('#foodstationProducts').innerHTML=food.length
+    ?food.slice(0,12).map(p=>{
+      const minor=10**(Number(p.prices?.currency_minor_unit)||0);
+      const price=(Number(p.prices?.price)||0)/minor;
+      const category=(p.categories||[])[0]?.name||'Produk pangan';
+      const stock=p.is_in_stock?'Tersedia':'Stok habis';
+      return '<article class="product-data-card">'+
+        '<div class="product-data-top"><span>'+esc(category)+'</span><small>'+esc(stock)+'</small></div>'+
+        '<strong>'+esc(decodeText(p.name||'Produk Food Station'))+'</strong>'+
+        '<b>'+esc(idr(price))+'</b>'+
+        '<a href="'+esc(p.permalink||'https://foodstation.id/shop/')+'" target="_blank" rel="noopener">Lihat produk ↗</a>'+
+      '</article>';
+    }).join('')
+    :'<div class="empty-inline">Katalog Food Station belum tersedia.</div>';
+
+  const topPam=[...pamRows]
+    .sort((a,b)=>(Number(b.sum_keluha??b.SUM_Keluha)||0)-(Number(a.sum_keluha??a.SUM_Keluha)||0))
+    .slice(0,10);
+
+  $('#pamjayaTop').innerHTML=topPam.length
+    ?topPam.map(a=>
+      '<article class="region-row">'+
+        '<div><strong>'+esc(a.kelurahan||a.KELURAHAN||'—')+'</strong>'+
+        '<span>'+esc([a.kecamatan||a.KECAMATAN,a.kotamadya||a.KOTAMADYA].filter(Boolean).join(' · '))+'</span></div>'+
+        '<code>'+fmt(a.sum_keluha??a.SUM_Keluha||0)+' keluhan</code>'+
+      '</article>'
+    ).join('')
+    :'<div class="empty-inline">Agregat keluhan PAM JAYA belum tersedia.</div>';
+
+  $('#waskitaPosts').innerHTML=wk.length
+    ?wk.slice(0,8).map(p=>{
+      const date=p.date?new Date(p.date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'';
+      return '<article class="news-data-row">'+
+        '<div><small>'+esc(date)+'</small><strong>'+esc(decodeText(p.title?.rendered||'Publikasi Waskita'))+'</strong>'+
+        '<p>'+esc(decodeText(p.excerpt?.rendered||'').slice(0,150))+'</p></div>'+
+        '<a href="'+esc(p.link||'https://www.waskita.co.id/')+'" target="_blank" rel="noopener">Buka ↗</a>'+
+      '</article>';
+    }).join('')
+    :'<div class="empty-inline">Publikasi Waskita belum tersedia.</div>';
+}
+
+async function loadEnterpriseData(){
+  const tasks=await Promise.allSettled([
+    json(LIVE.foodstation),
+    json(LIVE.pamjaya),
+    json(LIVE.waskita)
+  ]);
+
+  state.foodstation=tasks[0].status==='fulfilled'&&Array.isArray(tasks[0].value)
+    ?tasks[0].value:[];
+  state.pamComplaints=tasks[1].status==='fulfilled'&&Array.isArray(tasks[1].value?.features)
+    ?tasks[1].value.features:[];
+  state.waskita=tasks[2].status==='fulfilled'&&Array.isArray(tasks[2].value)
+    ?tasks[2].value:[];
+
+  renderEnterpriseData();
+}
+
 function renderSources(){
   $('#activeSourceCount').textContent=state.sources.length||'—';
 
@@ -429,6 +518,8 @@ function renderSources(){
 async function loadRegistry(){
   const r=await json('./data/apis.json');
   state.sources=(r.sources||[]).filter(s=>s.auth==='none');
+  const enterpriseCount=state.sources.filter(s=>s.ownership==='BUMN'||s.ownership==='BUMD').length;
+  if($('#enterpriseSummaryCount'))$('#enterpriseSummaryCount').textContent=fmt(enterpriseCount);
   renderSources();
 }
 
@@ -439,7 +530,8 @@ async function reloadAll(){
   await Promise.allSettled([
     loadStatus(),
     loadBMKG(),
-    loadAdditionalData()
+    loadAdditionalData(),
+    loadEnterpriseData()
   ]);
 
   toast('Data publik dimuat ulang');
@@ -475,7 +567,8 @@ async function init(){
     loadRegistry(),
     loadStatus(),
     loadBMKG(),
-    loadAdditionalData()
+    loadAdditionalData(),
+    loadEnterpriseData()
   ]);
 
   if('serviceWorker'in navigator){
