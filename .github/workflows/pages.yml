@@ -47,6 +47,14 @@ jobs:
           const missing=required.filter(id=>!ids.includes(id));
           if(missing.length){console.error('Missing dashboard IDs:',missing);process.exit(1)}
           console.log('Dashboard DOM contract OK:',required.length,'required IDs');
+          const js=fs.readFileSync('app.js','utf8');
+          const initCount=(js.match(/async function init\(\)/g)||[]).length;
+          const initCalls=(js.match(/\ninit\(\);/g)||[]).length;
+          if(initCount!==1||initCalls!==1){
+            console.error('Invalid frontend init contract',{initCount,initCalls});
+            process.exit(1);
+          }
+          console.log('Frontend init contract OK');
           NODE
 
       - name: Fetch verified public REST data
