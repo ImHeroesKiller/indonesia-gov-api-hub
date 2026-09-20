@@ -1,1154 +1,159 @@
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 
-const state={
-  sources:[],
-  weather:null,
-  latestQuake:null,
-  m5:[],
-  felt:[],
-  quakeTab:'m5',
-  bigCount:0,
-  bigSamples:[],
-  catalogs:{banten:{count:0,items:[]},grobogan:{count:0,items:[]}},
-  catalogTab:'banten',
-  foodstation:[],
-  pamComplaints:[],
-  waskita:[],
-  status:null,
-  domainSummary:{thematic:{},operational:{}},
-  indicatorSummary:{indicators:[]},
-  directStats:{},
-  regionalSummary:{regions:[]}
-};
-
+const state={sources:{institutions:[]},model:{factors:[]},summary:{},industry:{themes:{},items:[]},energy:{},status:{}};
 const LIVE={
-  weather:'./live/weather-kemayoran.json',
-  latest:'./live/earthquake-latest.json',
-  m5:'./live/earthquake-m5.json',
-  felt:'./live/earthquake-felt.json',
-  bigCount:'./live/big-village-count.json',
-  bigSample:'./live/big-village-sample.json',
-  banten:'./live/banten-datasets.json',
-  grobogan:'./live/grobogan-datasets.json',
-  foodstation:'./live/foodstation-products.json',
-  pamjaya:'./live/pamjaya-complaints.json',
-  waskita:'./live/waskita-posts.json',
-  domainSummary:'./live/domain-summary.json',
-  indicators:'./live/indicator-summary.json',
-  directStats:'./live/direct-stats.json',
-  regionalSummary:'./live/regional-summary.json',
-  status:'./live/status.json'
+  sources:'./data/investment-sources.json',
+  model:'./data/investment-model.json',
+  summary:'./live/investment-summary.json',
+  industry:'./live/investment-industry.json',
+  energy:'./live/investment-energy.json',
+  status:'./live/investment-status.json'
 };
-
-const esc=v=>String(v??'')
-  .replaceAll('&','&amp;').replaceAll('<','&lt;')
-  .replaceAll('>','&gt;').replaceAll('"','&quot;')
-  .replaceAll("'","&#039;");
-
+const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
 const fmt=v=>new Intl.NumberFormat('id-ID').format(Number(v)||0);
 
-function toast(m){
-  const e=$('#toast');
-  e.textContent=m;
-  e.classList.add('show');
-  clearTimeout(toast.t);
-  toast.t=setTimeout(()=>e.classList.remove('show'),2200);
-}
-
-function route(){
-  const requested=location.hash.slice(1)||'dashboard';
-  const valid=['dashboard','weather','earthquake','data','sources'];
-  const r=valid.includes(requested)?requested:'dashboard';
-  $$('.view').forEach(v=>v.classList.toggle('active',v.dataset.view===r));
-  $$('[data-route]').forEach(b=>b.classList.toggle('active',b.dataset.route===r));
-  window.scrollTo({top:0});
-}
-
-function nav(r){location.hash=r}
-
-function setTheme(){
-  const v=localStorage.getItem('nusadata-theme')||
-    (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
-  document.documentElement.dataset.theme=v;
-}
-
-function toggleTheme(){
-  const v=document.documentElement.dataset.theme==='dark'?'light':'dark';
-  document.documentElement.dataset.theme=v;
-  localStorage.setItem('nusadata-theme',v);
-}
-
-async function json(url,timeout=12000){
+async function json(url,timeout=15000){
   const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);
   try{
     const sep=url.includes('?')?'&':'?';
-    const r=await fetch(url+sep+'_ts='+Date.now(),{
-      signal:c.signal,
-      cache:'no-store',
-      headers:{Accept:'application/json'}
-    });
+    const r=await fetch(url+sep+'_ts='+Date.now(),{signal:c.signal,cache:'no-store',headers:{Accept:'application/json'}});
     if(!r.ok)throw new Error('HTTP '+r.status);
     return await r.json();
-  }finally{
-    clearTimeout(t);
-  }
+  }finally{clearTimeout(t)}
 }
-
-function clock(){
-  const d=new Date();
-  $('#liveClock').textContent=d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+' WIB';
+function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2200)}
+function setTheme(){const v=localStorage.getItem('nusadata-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=v}
+function toggleTheme(){const v=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=v;localStorage.setItem('nusadata-theme',v)}
+function route(){
+  const valid=['overview','macro','trade','energy','sources'];
+  const r=valid.includes(location.hash.slice(1))?location.hash.slice(1):'overview';
+  $$('.view').forEach(v=>v.classList.toggle('active',v.dataset.view===r));
+  $$('[data-route]').forEach(b=>b.classList.toggle('active',b.dataset.route===r));
+  scrollTo({top:0});
 }
-
-function parseLocalTime(v=''){
-  const d=new Date(String(v).replace(' ','T'));
-  return Number.isNaN(d.getTime())?null:d;
-}
-
-function weatherRows(p){
-  const d=p?.data?.[0]?.cuaca||[];
-  return d.flat(Infinity).filter(x=>x&&typeof x==='object'&&('t'in x||'weather_desc'in x));
-}
-
-function weatherLoc(p){
-  return p?.lokasi||p?.data?.[0]?.lokasi||{};
-}
-
-function nextForecast(rows){
-  const now=Date.now();
-  return rows.find(x=>{
-    const d=parseLocalTime(x.local_datetime||x.datetime);
-    return d&&d.getTime()>=now-30*60*1000;
-  })||rows[0];
-}
-
-function weatherIcon(desc=''){
-  const x=desc.toLowerCase();
-  if(x.includes('petir'))return'⛈';
-  if(x.includes('hujan'))return'🌧';
-  if(x.includes('berawan'))return'☁';
-  if(x.includes('cerah'))return'☀';
-  if(x.includes('kabut'))return'🌫';
-  return'🌤';
-}
-
-function timeLabel(v){
-  const d=parseLocalTime(v);
-  return d?d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}):'—';
-}
-
-function fullTimeLabel(v){
-  const d=parseLocalTime(v);
-  return d?d.toLocaleString('id-ID',{
-    weekday:'short',
-    day:'numeric',
-    month:'short',
-    hour:'2-digit',
-    minute:'2-digit'
-  }):'—';
-}
-
-function renderWeather(p,full=false){
-  const rows=weatherRows(p),loc=weatherLoc(p),now=nextForecast(rows);
-  if(!now)throw new Error('Format data cuaca tidak dikenali');
-
-  if(!full){
-    $('#weatherNow').classList.remove('skeleton-block');
-    $('#weatherNow').innerHTML=
-      '<div class="weather-icon">'+weatherIcon(now.weather_desc)+'</div>'+
-      '<div><strong>'+esc(now.t)+'°</strong>'+
-      '<span>'+esc(now.weather_desc||'—')+'</span>'+
-      '<small>'+esc(loc.desa||loc.kecamatan||'Kemayoran')+', '+esc(loc.kotkab||loc.provinsi||'DKI Jakarta')+'</small></div>'+
-      '<div class="weather-facts"><span>💧 '+esc(now.hu)+'%</span><span>↝ '+esc(now.ws)+' km/j</span></div>';
-
-    $('#weatherMini').innerHTML=rows.slice(0,5).map(x=>
-      '<div><span>'+timeLabel(x.local_datetime||x.datetime)+'</span>'+
-      '<b>'+weatherIcon(x.weather_desc)+' '+esc(x.t)+'°</b></div>'
-    ).join('');
-
-    $('#weatherStatus').textContent='Verified';
-  }else{
-    $('#weatherLocation').innerHTML=
-      '<strong>'+esc(loc.desa||'Kemayoran')+'</strong>'+
-      '<span>'+esc([loc.kecamatan,loc.kotkab,loc.provinsi].filter(Boolean).join(' · '))+'</span>';
-
-    $('#weatherDetail').innerHTML=rows.slice(0,24).map(x=>
-      '<article class="forecast-item">'+
-      '<time>'+fullTimeLabel(x.local_datetime||x.datetime)+'</time>'+
-      '<div class="forecast-icon">'+weatherIcon(x.weather_desc)+'</div>'+
-      '<strong>'+esc(x.t)+'°C</strong>'+
-      '<span>'+esc(x.weather_desc||'—')+'</span>'+
-      '<small>Kelembapan '+esc(x.hu)+'% · Angin '+esc(x.ws)+' km/j</small>'+
-      '</article>'
-    ).join('');
-  }
-}
-
-function quakeObj(p){return p?.Infogempa?.gempa}
-
-function quakeCard(q){
-  return '<article class="quake-row">'+
-    '<div class="mag">M<strong>'+esc(q.Magnitude)+'</strong></div>'+
-    '<div class="quake-copy">'+
-    '<strong>'+esc(q.Wilayah)+'</strong>'+
-    '<span>'+esc(q.Tanggal)+' · '+esc(q.Jam)+' · Kedalaman '+esc(q.Kedalaman)+'</span>'+
-    '<small>'+esc(q.Potensi||q.Dirasakan||'')+'</small>'+
-    '</div>'+
-  '</article>';
-}
-
-function renderLatestQuake(q){
-  if(!q)throw new Error('Data gempa kosong');
-
-  $('#latestQuake').classList.remove('skeleton-block');
-  $('#latestQuake').innerHTML=
-    '<div class="magnitude"><span>M</span><strong>'+esc(q.Magnitude)+'</strong></div>'+
-    '<div class="quake-copy">'+
-      '<strong>'+esc(q.Wilayah)+'</strong>'+
-      '<span>'+esc(q.Tanggal)+' · '+esc(q.Jam)+'</span>'+
-      '<small>Kedalaman '+esc(q.Kedalaman)+' · '+esc(q.Potensi||'')+'</small>'+
-    '</div>';
-
-  $('#quakeStatus').textContent='Verified';
-
-  $('#quakeHero').innerHTML=
-    '<div class="magnitude big"><span>M</span><strong>'+esc(q.Magnitude)+'</strong></div>'+
-    '<div><span class="kicker">GEMPA TERBARU</span>'+
-      '<h2>'+esc(q.Wilayah)+'</h2>'+
-      '<p>'+esc(q.Tanggal)+' · '+esc(q.Jam)+' · Kedalaman '+esc(q.Kedalaman)+'</p>'+
-      '<div class="tag-line"><span>'+esc(q.Potensi||'')+'</span>'+
-      (q.Dirasakan?'<span>Dirasakan: '+esc(q.Dirasakan)+'</span>':'')+
-      '</div>'+
-    '</div>';
-}
-
-function renderQuakeList(){
-  const a=state.quakeTab==='felt'?state.felt:state.m5;
-  $('#quakeList').innerHTML=a.length
-    ?a.map(quakeCard).join('')
-    :'<div class="empty-inline">Data belum tersedia.</div>';
-}
-
-function errorBox(m){
-  return '<div class="error-box">'+esc(m)+'</div>';
-}
-
-async function loadStatus(){
-  try{
-    const s=await json(LIVE.status,8000);
-    state.status=s;
-    if(s.generated_at){
-      const d=new Date(s.generated_at);
-      const label='Snapshot '+d.toLocaleString('id-ID',{
-        day:'numeric',
-        month:'short',
-        hour:'2-digit',
-        minute:'2-digit',
-        timeZone:'Asia/Jakarta'
-      })+' WIB';
-      $('#weatherStatus').title=label;
-      $('#quakeStatus').title=label;
-    }
-  }catch{}
-}
-
-async function loadBMKG(){
-  const tasks=await Promise.allSettled([
-    json(LIVE.weather),
-    json(LIVE.latest),
-    json(LIVE.m5),
-    json(LIVE.felt)
-  ]);
-
-  if(tasks[0].status==='fulfilled'){
-    state.weather=tasks[0].value;
-    try{
-      renderWeather(state.weather);
-      renderWeather(state.weather,true);
-    }catch(e){
-      $('#weatherStatus').textContent='Invalid';
-      $('#weatherNow').classList.remove('skeleton-block');
-      $('#weatherNow').innerHTML=errorBox(e.message);
-    }
-  }else{
-    $('#weatherStatus').textContent='Unavailable';
-    $('#weatherNow').classList.remove('skeleton-block');
-    $('#weatherNow').innerHTML=errorBox('Snapshot REST cuaca belum tersedia.');
-    $('#weatherDetail').innerHTML=errorBox('Data cuaca belum tersedia.');
-  }
-
-  if(tasks[1].status==='fulfilled'){
-    state.latestQuake=quakeObj(tasks[1].value);
-    try{
-      renderLatestQuake(state.latestQuake);
-    }catch(e){
-      $('#quakeStatus').textContent='Invalid';
-      $('#latestQuake').classList.remove('skeleton-block');
-      $('#latestQuake').innerHTML=errorBox(e.message);
-    }
-  }else{
-    $('#quakeStatus').textContent='Unavailable';
-    $('#latestQuake').classList.remove('skeleton-block');
-    $('#latestQuake').innerHTML=errorBox('Snapshot gempa belum tersedia.');
-    $('#quakeHero').innerHTML=errorBox('Data gempa terbaru belum tersedia.');
-  }
-
-  const m5=tasks[2].status==='fulfilled'?quakeObj(tasks[2].value):[];
-  const felt=tasks[3].status==='fulfilled'?quakeObj(tasks[3].value):[];
-
-  state.m5=Array.isArray(m5)?m5:(m5?[m5]:[]);
-  state.felt=Array.isArray(felt)?felt:(felt?[felt]:[]);
-
-  $('#dashboardQuakes').innerHTML=state.m5.slice(0,6).map(quakeCard).join('')||
-    '<div class="empty-inline">Data gempa belum tersedia.</div>';
-
-  renderQuakeList();
-}
-
-function renderBIG(){
-  $('#bigSummaryCount').textContent=fmt(state.bigCount);
-  $('#bigCount').textContent=fmt(state.bigCount);
-  $('#bigSampleCount').textContent=fmt(state.bigSamples.length);
-
-  $('#bigSamples').innerHTML=state.bigSamples.length
-    ?state.bigSamples.map(x=>{
-      const a=x.attributes||{};
-      return '<article class="region-row">'+
-        '<div><strong>'+esc(a.WADMKD||a.NAMOBJ||'—')+'</strong>'+
-        '<span>'+esc([a.WADMKC,a.WADMKK,a.WADMPR].filter(Boolean).join(' · '))+'</span></div>'+
-        '<code>'+esc(a.KDEPUM||'—')+'</code>'+
-      '</article>';
-    }).join('')
-    :'<div class="empty-inline">Data contoh wilayah belum tersedia.</div>';
-}
-
-function cleanText(v=''){
-  return String(v).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
-}
-
-function catalogName(key){
-  return key==='banten'?'Satu Data Banten':'Open Data Grobogan';
-}
-
-function catalogBase(key){
-  const bases={
-    banten:'https://data.bantenprov.go.id/dataset/',
-    grobogan:'https://opendata.grobogan.go.id/dataset/',
-    aceh:'https://data.acehprov.go.id/id/dataset/',
-    sumbar:'https://data.sumbarprov.go.id/dataset/',
-    sumsel:'https://opendata.sumselprov.go.id/dataset/',
-    jateng:'https://data.jatengprov.go.id/dataset/',
-    kaltim:'https://data.kaltimprov.go.id/dataset/'
-  };
-  return bases[key]||'#';
-}
-
-function datasetCard(d,key){
-  const org=d.organization?.title||d.author||'Instansi pemerintah';
-  const modified=d.metadata_modified
-    ?new Date(d.metadata_modified).toLocaleDateString('id-ID',{
-      day:'numeric',month:'short',year:'numeric'
-    })
-    :'';
-  const formats=[...new Set((d.resources||[]).map(r=>r.format).filter(Boolean))].slice(0,4);
-
-  return '<article class="dataset-card panel">'+
-    '<div class="dataset-top"><span>'+esc(catalogName(key))+'</span><small>'+esc(modified)+'</small></div>'+
-    '<h3>'+esc(d.title||d.name||'Dataset')+'</h3>'+
-    '<p>'+esc(cleanText(d.notes||'').slice(0,180)||'Dataset publik pemerintah daerah.')+'</p>'+
-    '<div class="format-row">'+formats.map(f=>'<span>'+esc(f)+'</span>').join('')+'</div>'+
-    '<div class="dataset-foot"><span>'+esc(org)+'</span>'+
-    '<a href="'+esc(catalogBase(key)+(d.name||''))+'" target="_blank" rel="noopener">Buka dataset ↗</a></div>'+
-  '</article>';
-}
-
-function renderCatalog(){
-  const key=state.catalogTab;
-  const c=state.catalogs[key];
-
-  $$('[data-catalog-tab]').forEach(b=>b.classList.toggle('active',b.dataset.catalogTab===key));
-
-  $('#catalogMeta').textContent=
-    fmt(c.count)+' dataset publik · '+catalogName(key)+' · snapshot terbaru';
-
-  $('#catalogGrid').innerHTML=c.items.length
-    ?c.items.map(d=>datasetCard(d,key)).join('')
-    :'<div class="empty-inline">Dataset belum tersedia pada snapshot ini.</div>';
-}
-
-function renderCatalogSummary(){
-  const b=state.catalogs.banten;
-  const g=state.catalogs.grobogan;
-
-  $('#bantenSummaryCount').textContent=fmt(b.count);
-  $('#groboganSummaryCount').textContent=fmt(g.count);
-
-  $('#bantenLatest').textContent=b.items[0]
-    ?'Terbaru: '+(b.items[0].title||b.items[0].name)
-    :'Belum ada snapshot dataset.';
-
-  $('#groboganLatest').textContent=g.items[0]
-    ?'Terbaru: '+(g.items[0].title||g.items[0].name)
-    :'Belum ada snapshot dataset.';
-}
-
-async function loadAdditionalData(){
-  const tasks=await Promise.allSettled([
-    json(LIVE.bigCount),
-    json(LIVE.bigSample),
-    json(LIVE.banten),
-    json(LIVE.grobogan)
-  ]);
-
-  if(tasks[0].status==='fulfilled'){
-    state.bigCount=Number(tasks[0].value?.count)||0;
-  }
-
-  if(tasks[1].status==='fulfilled'){
-    state.bigSamples=Array.isArray(tasks[1].value?.features)
-      ?tasks[1].value.features
-      :[];
-  }
-
-  if(tasks[2].status==='fulfilled'&&tasks[2].value?.success){
-    state.catalogs.banten={
-      count:Number(tasks[2].value?.result?.count)||0,
-      items:Array.isArray(tasks[2].value?.result?.results)
-        ?tasks[2].value.result.results
-        :[]
-    };
-  }
-
-  if(tasks[3].status==='fulfilled'&&tasks[3].value?.success){
-    state.catalogs.grobogan={
-      count:Number(tasks[3].value?.result?.count)||0,
-      items:Array.isArray(tasks[3].value?.result?.results)
-        ?tasks[3].value.result.results
-        :[]
-    };
-  }
-
-  renderBIG();
-  renderCatalogSummary();
-  renderCatalog();
-}
-
-
-function idr(value){
-  const n=Number(value);
-  if(!Number.isFinite(n)||n<=0)return'Harga belum tersedia';
-  return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
-}
-
-function decodeText(v=''){
-  const el=document.createElement('textarea');
-  el.innerHTML=String(v);
-  return el.value.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
-}
-
-function renderEnterpriseData(){
-  const food=state.foodstation;
-  const pam=state.pamComplaints;
-  const wk=state.waskita;
-
-  $('#foodstationCount').textContent=fmt(food.length);
-  $('#waskitaCount').textContent=fmt(wk.length);
-
-  const pamRows=pam.map(x=>x.attributes||{});
-  const pamTotal=pamRows.reduce((sum,a)=>sum+(Number(a.sum_keluha??a.SUM_Keluha)||0),0);
-  $('#pamComplaintTotal').textContent=fmt(pamTotal);
-
-  $('#foodstationProducts').innerHTML=food.length
-    ?food.slice(0,12).map(p=>{
-      const minor=10**(Number(p.prices?.currency_minor_unit)||0);
-      const price=(Number(p.prices?.price)||0)/minor;
-      const category=(p.categories||[])[0]?.name||'Produk pangan';
-      const stock=p.is_in_stock?'Tersedia':'Stok habis';
-      return '<article class="product-data-card">'+
-        '<div class="product-data-top"><span>'+esc(category)+'</span><small>'+esc(stock)+'</small></div>'+
-        '<strong>'+esc(decodeText(p.name||'Produk Food Station'))+'</strong>'+
-        '<b>'+esc(idr(price))+'</b>'+
-        '<a href="'+esc(p.permalink||'https://foodstation.id/shop/')+'" target="_blank" rel="noopener">Lihat produk ↗</a>'+
-      '</article>';
-    }).join('')
-    :'<div class="empty-inline">Katalog Food Station belum tersedia.</div>';
-
-  const topPam=[...pamRows]
-    .sort((a,b)=>(Number(b.sum_keluha??b.SUM_Keluha)||0)-(Number(a.sum_keluha??a.SUM_Keluha)||0))
-    .slice(0,10);
-
-  $('#pamjayaTop').innerHTML=topPam.length
-    ?topPam.map(a=>
-      '<article class="region-row">'+
-        '<div><strong>'+esc(a.kelurahan||a.KELURAHAN||'—')+'</strong>'+
-        '<span>'+esc([a.kecamatan||a.KECAMATAN,a.kotamadya||a.KOTAMADYA].filter(Boolean).join(' · '))+'</span></div>'+
-        '<code>'+fmt(a.sum_keluha??a.SUM_Keluha??0)+' keluhan</code>'+
-      '</article>'
-    ).join('')
-    :'<div class="empty-inline">Agregat keluhan PAM JAYA belum tersedia.</div>';
-
-  $('#waskitaPosts').innerHTML=wk.length
-    ?wk.slice(0,8).map(p=>{
-      const date=p.date?new Date(p.date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'';
-      return '<article class="news-data-row">'+
-        '<div><small>'+esc(date)+'</small><strong>'+esc(decodeText(p.title?.rendered||'Publikasi Waskita'))+'</strong>'+
-        '<p>'+esc(decodeText(p.excerpt?.rendered||'').slice(0,150))+'</p></div>'+
-        '<a href="'+esc(p.link||'https://www.waskita.co.id/')+'" target="_blank" rel="noopener">Buka ↗</a>'+
-      '</article>';
-    }).join('')
-    :'<div class="empty-inline">Publikasi Waskita belum tersedia.</div>';
-}
-
-async function loadEnterpriseData(){
-  const tasks=await Promise.allSettled([
-    json(LIVE.foodstation),
-    json(LIVE.pamjaya),
-    json(LIVE.waskita)
-  ]);
-
-  state.foodstation=tasks[0].status==='fulfilled'&&Array.isArray(tasks[0].value)
-    ?tasks[0].value:[];
-  state.pamComplaints=tasks[1].status==='fulfilled'&&Array.isArray(tasks[1].value?.features)
-    ?tasks[1].value.features:[];
-  state.waskita=tasks[2].status==='fulfilled'&&Array.isArray(tasks[2].value)
-    ?tasks[2].value:[];
-
-  renderEnterpriseData();
-}
-
-
-
-const domainMeta={
-  education:{label:'Pendidikan',note:'sekolah, peserta didik, layanan pendidikan'},
-  health:{label:'Kesehatan',note:'fasilitas, penyakit, layanan kesehatan'},
-  economy:{label:'Ekonomi',note:'aktivitas ekonomi dan indikator daerah'},
-  environment:{label:'Lingkungan',note:'lingkungan hidup dan pengelolaan wilayah'},
-  agriculture:{label:'Pertanian & Pangan',note:'pertanian, komoditas dan pangan'},
-  demography:{label:'Demografi',note:'penduduk dan kependudukan'},
-  social:{label:'Sosial',note:'kemiskinan dan kesejahteraan sosial'},
-  employment:{label:'Ketenagakerjaan',note:'tenaga kerja dan kesempatan kerja'},
-  finance:{label:'Keuangan',note:'keuangan dan fiskal daerah'}
-};
-
-function operationalCards(){
-  const op=state.domainSummary?.operational||{};
-  const topMode=op.transport?.modes?.[0];
-  return [
-    {
-      key:'transport',label:'Transportasi Jakarta',
-      value:op.transport?.count||0,unit:'titik',
-      meta:topMode?topMode.name+' · '+fmt(topMode.count):'moda publik'
-    },
-    {
-      key:'roads',label:'Jaringan Jalan DKI',
-      value:op.roads?.count||0,unit:'fitur',
-      meta:'Peta Dasar DKI'
-    },
-    {
-      key:'rdtr',label:'RDTR Jakarta',
-      value:op.rdtr?.count||0,unit:'fitur',
-      meta:'rencana pola ruang'
-    },
-    {
-      key:'oil_gas_wells',label:'Sumur Migas ESDM',
-      value:op.oil_gas_wells?.count||0,unit:'sumur',
-      meta:'Data Migas ArcGIS'
-    },
-    {
-      key:'oil_gas_working_areas_2026',label:'WK Migas 2026',
-      value:op.oil_gas_working_areas_2026?.count||0,unit:'wilayah kerja',
-      meta:'tahap 1'
-    }
-  ];
-}
-
-function renderDomainData(){
-  const thematic=state.domainSummary?.thematic||{};
-  const domains=Object.entries(domainMeta).map(([key,meta])=>({
-    key,
-    ...meta,
-    count:Number(thematic[key]?.count)||0,
-    banten:Number(thematic[key]?.sources?.banten)||0,
-    grobogan:Number(thematic[key]?.sources?.grobogan)||0,
-    latest:thematic[key]?.items?.[0]
-  }));
-
-  const domainMarkup=domains.map(d=>
-    '<article class="domain-card">'+
-      '<div class="domain-card-head"><span>'+esc(d.label)+'</span><strong>'+fmt(d.count)+'</strong></div>'+
-      '<small>Banten '+fmt(d.banten)+' · Grobogan '+fmt(d.grobogan)+'</small>'+
-      '<p>'+esc(d.latest?.title||d.note)+'</p>'+
-    '</article>'
-  ).join('');
-
-  const dg=$('#dashboardDomainGrid');
-  if(dg)dg.innerHTML=domainMarkup||'<div class="empty-inline">Domain tematik belum tersedia.</div>';
-  const eg=$('#domainExplorerGrid');
-  if(eg)eg.innerHTML=domainMarkup||'<div class="empty-inline">Domain tematik belum tersedia.</div>';
-
-  const ops=operationalCards();
-  const opMarkup=ops.map(o=>
-    '<article class="operational-card">'+
-      '<span>'+esc(o.label)+'</span>'+
-      '<strong>'+fmt(o.value)+'</strong>'+
-      '<small>'+esc(o.unit)+' · '+esc(o.meta)+'</small>'+
-    '</article>'
-  ).join('');
-
-  const dop=$('#dashboardOperationalDomains');
-  if(dop)dop.innerHTML=opMarkup;
-  const eop=$('#domainOperationalGrid');
-  if(eop)eop.innerHTML=opMarkup;
-
-  const latest=Object.entries(thematic)
-    .flatMap(([key,d])=>(d.items||[]).map(item=>({...item,_domain:key})))
-    .sort((a,b)=>new Date(b.metadata_modified||0)-new Date(a.metadata_modified||0))
-    .filter((item,index,arr)=>arr.findIndex(x=>(x.id||x.name)===(item.id||item.name))===index)
-    .slice(0,10);
-
-  const feed=$('#domainLatestFeed');
-  if(feed){
-    feed.innerHTML=latest.length?latest.map(item=>{
-      const meta=domainMeta[item._domain]||{label:item._domain};
-      const date=item.metadata_modified
-        ?new Date(item.metadata_modified).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})
-        :'—';
-      const key=item.source_key||'banten';
-      return '<a class="feed-row" href="'+esc(catalogBase(key)+(item.name||''))+'" target="_blank" rel="noopener">'+
-        '<div><span>'+esc(meta.label)+' · '+esc(item.source||'Open Data')+' · '+esc(date)+'</span>'+
-        '<strong>'+esc(item.title||item.name||'Dataset')+'</strong></div><b>↗</b></a>';
-    }).join(''):'<div class="empty-inline">Dataset tematik belum tersedia.</div>';
-  }
-}
-
-const indicatorMeta={
-  'inflation':'Inflasi',
-  'food-prices':'Harga Pangan',
-  'schools':'Sekolah',
-  'health-facilities':'Fasilitas Kesehatan',
-  'unemployment':'Pengangguran',
-  'poverty':'Kemiskinan',
-  'regional-budget':'APBD',
-  'environment-quality':'Kualitas Lingkungan',
-  'agriculture-production':'Produksi Pertanian'
-};
-
-function moneyCompact(value){
-  const n=Number(value)||0;
-  if(n>=1e12)return'Rp '+(n/1e12).toLocaleString('id-ID',{maximumFractionDigits:2})+' T';
-  if(n>=1e9)return'Rp '+(n/1e9).toLocaleString('id-ID',{maximumFractionDigits:2})+' M';
-  if(n>=1e6)return'Rp '+(n/1e6).toLocaleString('id-ID',{maximumFractionDigits:1})+' jt';
-  return idr(n);
-}
-
-function latestSeries(series=[]){
-  return [...series].sort((a,b)=>(Number(b.year)||0)-(Number(a.year)||0))[0]||null;
-}
-
-function directStatModel(){
-  const d=state.directStats||{};
-  const employment=Array.isArray(d.employment?.records)?d.employment.records:[];
-  const highest=[...employment].sort((a,b)=>(Number(b.value)||0)-(Number(a.value)||0))[0];
-  const lowest=[...employment].sort((a,b)=>(Number(a.value)||0)-(Number(b.value)||0))[0];
-  const poverty=d.poverty?.record||null;
-
-  const revenueRows=Array.isArray(d.revenue?.records)?d.revenue.records:[];
-  const topRevenueNames=new Set([
-    'Pendapatan Asli Daerah (PAD)',
-    'Dana Perimbangan',
-    'Lain-lain Pendapatan yang Sah'
-  ]);
-  const revenue=revenueRows
-    .filter(x=>topRevenueNames.has(x.category))
-    .reduce((s,x)=>s+(Number(x.value_thousand)||0),0)*1000;
-
-  const education=latestSeries(d.education?.series);
-  const health=latestSeries(d.health?.series);
-  const environment=latestSeries(d.environment?.series);
-
-  const agriRows=Array.isArray(d.agriculture?.records)?d.agriculture.records:[];
-  const agricultureTotal=agriRows.reduce((s,x)=>s+(Number(x.value)||0),0);
-  const agriMap={};
-  agriRows.forEach(x=>{
-    const key=x.commodity||'Lainnya';
-    agriMap[key]=(agriMap[key]||0)+(Number(x.value)||0);
-  });
-  const agriRanking=Object.entries(agriMap)
-    .map(([commodity,value])=>({commodity,value}))
-    .sort((a,b)=>b.value-a.value);
-
-  const ihkRows=Array.isArray(d.ihk?.records)?d.ihk.records:[];
-  const cities=[...new Set(ihkRows.map(x=>x.city).filter(Boolean))];
-  const ihkChanges=cities.map(city=>{
-    const y23=ihkRows.find(x=>x.city===city&&Number(x.year)===2023);
-    const y24=ihkRows.find(x=>x.city===city&&Number(x.year)===2024);
-    const v23=Number(y23?.value)||0;
-    const v24=Number(y24?.value)||0;
-    return {
-      city,
-      value2023:v23,
-      value2024:v24,
-      change:v23>0&&v24>0?((v24/v23)-1)*100:null
-    };
-  }).filter(x=>x.value2024>0);
-  const ihkHighest=[...ihkChanges]
-    .filter(x=>Number.isFinite(x.change))
-    .sort((a,b)=>b.change-a.change)[0];
-
-  return {
-    highest,lowest,poverty,revenue,education,health,environment,
-    agricultureTotal,agriRanking,ihkChanges,ihkHighest
-  };
-}
-
-function statCard(label,value,meta,note=''){
-  return '<article class="direct-stat-card">'+
-    '<span>'+esc(label)+'</span>'+
-    '<strong>'+esc(value)+'</strong>'+
-    '<small>'+esc(meta)+'</small>'+
-    (note?'<p>'+esc(note)+'</p>':'')+
-  '</article>';
-}
-
-function regionalCardMarkup(regions){
-  return regions.map(r=>{
-    const latest=[...(r.items||[])].sort((a,b)=>new Date(b.metadata_modified||0)-new Date(a.metadata_modified||0))[0];
-    return '<article class="regional-coverage-card">'+
-      '<div><span>'+esc(r.name)+'</span><strong>'+fmt(r.count)+'</strong></div>'+
-      '<small>'+esc(r.level==='provinsi'?'Provinsi':'Kabupaten')+' · REST verified</small>'+
-      '<p>'+esc(latest?.title||'Katalog public REST aktif')+'</p>'+
-    '</article>';
-  }).join('');
-}
-function renderRegionalCoverage(){
-  const regions=state.regionalSummary?.regions||[];
-  const provinces=regions.filter(r=>r.level==='provinsi'&&r.available!==false);
-  const total=provinces.reduce((sum,r)=>sum+(Number(r.count)||0),0);
-  const detail=$('#regionalCoverage');
-  if(detail)detail.innerHTML=regionalCardMarkup(regions);
-  const dash=$('#dashboardRegionalCoverage');
-  if(dash)dash.innerHTML=regionalCardMarkup(provinces);
-  setText('#dashboardProvinceCoverage',fmt(provinces.length)+'/38');
-  setText('#dashboardRegionalDatasets',fmt(total));
-}
-async function loadRegionalCoverage(){
-  try{state.regionalSummary=await json(LIVE.regionalSummary,15000)}
-  catch{state.regionalSummary={regions:[]}}
-  renderRegionalCoverage();
-}
-
-function renderDirectStats(){
-  const d=state.directStats;
-  if(!d)return;
-
-  const m=directStatModel();
-  const cards=[
-    {
-      label:'TPT tertinggi',
-      value:m.highest?Number(m.highest.value).toLocaleString('id-ID',{maximumFractionDigits:2})+'%':'—',
-      meta:m.highest?.area||'Banten',
-      note:'Agustus 2024 · kab/kota'
-    },
-    {
-      label:'TPT terendah',
-      value:m.lowest?Number(m.lowest.value).toLocaleString('id-ID',{maximumFractionDigits:2})+'%':'—',
-      meta:m.lowest?.area||'Banten',
-      note:'Agustus 2024 · kab/kota'
-    },
-    {
-      label:'Penduduk miskin',
-      value:m.poverty?Number(m.poverty.value).toLocaleString('id-ID',{maximumFractionDigits:2})+' rb':'—',
-      meta:'Provinsi Banten · 2024',
-      note:'ribu orang'
-    },
-    {
-      label:'Realisasi pendapatan',
-      value:m.revenue?moneyCompact(m.revenue):'—',
-      meta:'Pemprov Banten · 2024',
-      note:'PAD + Dana Perimbangan + lain-lain sah'
-    },
-    {
-      label:'Jumlah SMK',
-      value:m.education?fmt(m.education.value):'—',
-      meta:'Banten · '+(m.education?.year||'—'),
-      note:'unit sekolah'
-    },
-    {
-      label:'Tempat tidur RS',
-      value:m.health?fmt(m.health.value):'—',
-      meta:'Banten · '+(m.health?.year||'—'),
-      note:'unit pada dataset sumber'
-    },
-    {
-      label:'Sampah tertangani',
-      value:m.environment?fmt(m.environment.value)+' ton':'—',
-      meta:'Banten · '+(m.environment?.year||'—'),
-      note:'sampah spesifik/kondisi khusus'
-    },
-    {
-      label:'Produksi perkebunan',
-      value:m.agricultureTotal?fmt(m.agricultureTotal)+' ton':'—',
-      meta:'Banten · 2024',
-      note:m.agriRanking[0]?'terbesar: '+m.agriRanking[0].commodity:'agregat komoditas'
-    },
-    {
-      label:'Perubahan IHK tertinggi',
-      value:m.ihkHighest&&Number.isFinite(m.ihkHighest.change)
-        ?(m.ihkHighest.change>=0?'+':'')+m.ihkHighest.change.toLocaleString('id-ID',{maximumFractionDigits:2})+'%'
-        :'—',
-      meta:m.ihkHighest?.city||'Kota pantauan Banten',
-      note:'perubahan indeks 2023 → 2024'
-    }
-  ];
-
-  const markup=cards.map(x=>statCard(x.label,x.value,x.meta,x.note)).join('');
-  const dashboard=$('#dashboardDirectStats');
-  if(dashboard)dashboard.innerHTML=markup;
-  const detail=$('#directStatsDetail');
-  if(detail)detail.innerHTML=markup;
-
-  const ihkMarkup=m.ihkChanges.length
-    ?m.ihkChanges.map(x=>
-      '<div class="stat-row">'+
-        '<div><strong>'+esc(x.city)+'</strong><span>IHK 2024 '+Number(x.value2024).toLocaleString('id-ID',{maximumFractionDigits:2})+'</span></div>'+
-        '<b class="'+(Number(x.change)>=0?'up':'down')+'">'+
-          (Number.isFinite(x.change)?(x.change>=0?'+':'')+x.change.toLocaleString('id-ID',{maximumFractionDigits:2})+'%':'—')+
-        '</b>'+
-      '</div>'
-    ).join('')
-    :'<div class="empty-inline">IHK belum tersedia.</div>';
-
-  const dashIhk=$('#dashboardIHK');
-  if(dashIhk)dashIhk.innerHTML='<div class="direct-list-title">IHK kota pantauan</div>'+ihkMarkup;
-  const ihkTable=$('#directIHKTable');
-  if(ihkTable)ihkTable.innerHTML=ihkMarkup;
-
-  const prices=Array.isArray(d.food_prices?.products)?d.food_prices.products:[];
-  const priceMarkup=prices.slice(0,8).map(p=>
-    '<a class="price-stat-card" href="'+esc(p.permalink||'https://foodstation.id/shop/')+'" target="_blank" rel="noopener">'+
-      '<span>'+esc(p.in_stock?'Tersedia':'Stok habis')+'</span>'+
-      '<strong>'+esc(p.name||'Produk pangan')+'</strong>'+
-      '<b>'+esc(idr(p.price))+'</b>'+
-    '</a>'
-  ).join('')||'<div class="empty-inline">Harga pangan belum tersedia.</div>';
-
-  const dashPrices=$('#dashboardFoodPrices');
-  if(dashPrices)dashPrices.innerHTML='<div class="direct-list-title">Harga pangan Food Station</div>'+priceMarkup;
-  const priceGrid=$('#directFoodPriceGrid');
-  if(priceGrid)priceGrid.innerHTML=priceMarkup;
-
-  const agri=$('#directAgriculture');
-  if(agri){
-    agri.innerHTML=m.agriRanking.slice(0,8).map((x,i)=>
-      '<div class="agri-row">'+
-        '<span><b>'+(i+1)+'</b>'+esc(x.commodity)+'</span>'+
-        '<strong>'+fmt(x.value)+' ton</strong>'+
-      '</div>'
-    ).join('')||'<div class="empty-inline">Data perkebunan belum tersedia.</div>';
-  }
-}
-
-async function loadDirectStats(){
-  try{state.directStats=await json(LIVE.directStats,15000)}
-  catch{state.directStats=null}
-  renderDirectStats();
-}
-
-function renderIndicators(){
-  const el=$('#indicatorGrid');
-  if(!el)return;
-  const rows=state.indicatorSummary?.indicators||[];
-  el.innerHTML=rows.map(x=>{
-    const latest=x.datasets?.[0];
-    const date=latest?.metadata_modified?new Date(latest.metadata_modified).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
-    return '<article class="indicator-card">'+
-      '<div class="indicator-head"><span>'+esc(indicatorMeta[x.key]||x.key)+'</span><strong>'+fmt(x.matches||0)+'</strong></div>'+
-      '<small>dataset cocok · update '+esc(date)+'</small>'+
-      '<p>'+esc(latest?.title||'Belum ada dataset yang cocok pada snapshot saat ini.')+'</p>'+
-    '</article>';
-  }).join('');
-}
-
-async function loadIndicators(){
-  try{state.indicatorSummary=await json(LIVE.indicators,15000)}
-  catch{state.indicatorSummary={indicators:[]}}
-  renderIndicators();
-}
-
-async function loadDomainData(){
-  try{
-    const d=await json(LIVE.domainSummary,15000);
-    state.domainSummary=d&&typeof d==='object'?d:{thematic:{},operational:{}};
-  }catch{
-    state.domainSummary={thematic:{},operational:{}};
-  }
-  renderDomainData();
-  renderDirectStats();
-}
-
-const sourceStatusKey={
-  'bmkg-weather':'bmkg_weather',
-  'bmkg-earthquake':'bmkg_earthquake',
-  'big-admin-boundaries':'big_admin_boundaries',
-  'banten-ckan':'banten_ckan',
-  'grobogan-ckan':'grobogan_ckan',
-  'foodstation-store':'foodstation_store',
-  'pamjaya-complaints':'pamjaya_complaints',
-  'waskita-posts':'waskita_posts',
-  'jakarta-transport':'jakarta_transport',
-  'jakarta-roads':'jakarta_roads',
-  'jakarta-rdtr':'jakarta_rdtr',
-  'esdm-migas':'esdm_migas',
-  'aceh-ckan':'aceh_ckan',
-  'sumbar-ckan':'sumbar_ckan',
-  'sumsel-ckan':'sumsel_ckan',
-  'jateng-ckan':'jateng_ckan',
-  'kaltim-ckan':'kaltim_ckan'
-};
-
-function setText(id,value){
-  const el=$(id);
-  if(el)el.textContent=value;
-}
-
+function nav(r){location.hash=r}
+function clock(){const e=$('#liveClock');if(e)e.textContent=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+' WIB'}
 function snapshotAge(v){
-  if(!v)return'Menunggu snapshot';
-  const d=new Date(v);
-  if(Number.isNaN(d.getTime()))return'Waktu snapshot tidak valid';
-  const mins=Math.max(0,Math.round((Date.now()-d.getTime())/60000));
-  if(mins<2)return'Baru saja';
-  if(mins<60)return mins+' menit lalu';
-  const hours=Math.floor(mins/60);
-  if(hours<24)return hours+' jam lalu';
-  return Math.floor(hours/24)+' hari lalu';
+  if(!v)return'Snapshot belum tersedia';
+  const d=new Date(v);if(Number.isNaN(d.getTime()))return'Snapshot belum tersedia';
+  return 'Snapshot '+d.toLocaleString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'})+' WIB';
 }
-
-function renderDashboard(){
-  const provinceRegions=(state.regionalSummary?.regions||[]).filter(r=>r.level==='provinsi'&&r.available!==false);
-  const datasetTotal=provinceRegions.reduce((sum,r)=>sum+(Number(r.count)||0),0)||
-    ((state.catalogs.banten.count||0)+(state.catalogs.grobogan.count||0));
-  const pamRows=state.pamComplaints.map(x=>x.attributes||{});
-  const pamTotal=pamRows.reduce((sum,a)=>sum+(Number(a.sum_keluha??a.SUM_Keluha)||0),0);
-
-  setText('#dashboardDatasetCount',fmt(datasetTotal));
-  setText('#dashboardM5Count',fmt(state.m5.length));
-  setText('#dashboardPamTotal',fmt(pamTotal));
-  setText('#dashboardFoodCount',fmt(state.foodstation.length));
-  setText('#dashboardPamAreas',fmt(pamRows.length));
-  setText('#dashboardWaskitaCount',fmt(state.waskita.length));
-
-  const status=state.status?.sources||{};
-  const statusEntries=Object.entries(status);
-  const healthy=statusEntries.filter(([,v])=>v===true).length;
-  const total=statusEntries.length||state.sources.length||0;
-  const score=total?Math.round(healthy/total*100):0;
-
-  setText('#dashboardHealth',total?score+'%':'—');
-  setText('#dashboardHealthText',total?healthy+'/'+total+' sumber sehat':'Status belum tersedia');
-  setText('#dashboardHealthBadge',total?healthy+'/'+total+' healthy':'Memuat…');
-  setText('#dashboardUpdated',state.status?.generated_at?snapshotAge(state.status.generated_at):'Menunggu snapshot');
-
-  const collections=[
-    {label:'Wilayah BIG',value:state.bigCount,unit:'fitur'},
-    {label:'Dataset Banten',value:state.catalogs.banten.count,unit:'dataset'},
-    {label:'Dataset Grobogan',value:state.catalogs.grobogan.count,unit:'dataset'},
-    {label:'PAM JAYA',value:pamRows.length,unit:'wilayah'},
-    {label:'Food Station',value:state.foodstation.length,unit:'produk'},
-    {label:'Waskita',value:state.waskita.length,unit:'publikasi'},
-    {label:'Gempa M5+',value:state.m5.length,unit:'kejadian'},
-    {label:'Transport Jakarta',value:state.domainSummary?.operational?.transport?.count,unit:'titik'},
-    {label:'Jalan DKI',value:state.domainSummary?.operational?.roads?.count,unit:'fitur'},
-    {label:'RDTR DKI',value:state.domainSummary?.operational?.rdtr?.count,unit:'fitur'},
-    {label:'Sumur Migas',value:state.domainSummary?.operational?.oil_gas_wells?.count,unit:'sumur'}
-  ].filter(x=>Number(x.value)>0);
-
-  const maxLog=Math.max(1,...collections.map(x=>Math.log10(Number(x.value)+1)));
-  const bars=$('#dashboardCoverageBars');
-  if(bars){
-    bars.innerHTML=collections.length?collections.map(x=>{
-      const pct=Math.max(8,Math.round(Math.log10(Number(x.value)+1)/maxLog*100));
-      return '<div class="coverage-row">'+
-        '<div class="coverage-label"><span>'+esc(x.label)+'</span><strong>'+fmt(x.value)+' '+esc(x.unit)+'</strong></div>'+
-        '<div class="coverage-track"><i style="width:'+pct+'%"></i></div>'+
-      '</div>';
-    }).join(''):'<div class="empty-inline">Volume snapshot belum tersedia.</div>';
-  }
-
-  const gov=state.sources.filter(s=>!s.ownership).length;
-  const bumn=state.sources.filter(s=>s.ownership==='BUMN').length;
-  const bumd=state.sources.filter(s=>s.ownership==='BUMD').length;
-  const mix=$('#dashboardSourceMix');
-  if(mix){
-    const groups=[
-      {label:'Pemerintah',value:gov},
-      {label:'BUMN',value:bumn},
-      {label:'BUMD',value:bumd}
-    ];
-    mix.innerHTML=groups.map(g=>
-      '<div class="mix-card"><strong>'+fmt(g.value)+'</strong><span>'+esc(g.label)+'</span>'+
-      '<small>'+Math.round((g.value/Math.max(1,state.sources.length))*100)+'% sumber</small></div>'
-    ).join('');
-  }
-
-  const datasets=(state.regionalSummary?.regions||[])
-    .flatMap(r=>(r.items||[]).map(d=>({...d,_source:r.name,_key:r.key})))
-    .sort((x,y)=>new Date(y.metadata_modified||0)-new Date(x.metadata_modified||0))
-    .slice(0,8);
-
-  const datasetFeed=$('#dashboardDatasets');
-  if(datasetFeed){
-    datasetFeed.innerHTML=datasets.length?datasets.map(d=>{
-      const date=d.metadata_modified?new Date(d.metadata_modified).toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'—';
-      return '<a class="feed-row" href="'+esc(catalogBase(d._key)+(d.name||''))+'" target="_blank" rel="noopener">'+
-        '<div><span>'+esc(d._source)+' · '+esc(date)+'</span><strong>'+esc(d.title||d.name||'Dataset')+'</strong></div>'+
-        '<b>↗</b></a>';
-    }).join(''):'<div class="empty-inline">Dataset terbaru belum tersedia.</div>';
-  }
-
-  const topPam=[...pamRows].sort((a,b)=>(Number(b.sum_keluha??b.SUM_Keluha)||0)-(Number(a.sum_keluha??a.SUM_Keluha)||0))[0];
-  const inStock=state.foodstation.filter(p=>p.is_in_stock).length;
-  const latestWaskita=state.waskita[0];
-  const latestWaskitaDate=latestWaskita?.date?new Date(latestWaskita.date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—';
-
-  const highlights=$('#dashboardEnterpriseHighlights');
-  if(highlights){
-    highlights.innerHTML=[
-      '<div><span>Food Station tersedia</span><strong>'+fmt(inStock)+' / '+fmt(state.foodstation.length)+'</strong><small>produk berstatus in-stock</small></div>',
-      '<div><span>PAM tertinggi</span><strong>'+esc(topPam?.kelurahan||topPam?.KELURAHAN||'—')+'</strong><small>'+fmt(topPam?.sum_keluha??topPam?.SUM_Keluha??0)+' keluhan agregat</small></div>',
-      '<div><span>Waskita terbaru</span><strong>'+esc(latestWaskitaDate)+'</strong><small>'+esc(decodeText(latestWaskita?.title?.rendered||'Belum tersedia').slice(0,55))+'</small></div>'
-    ].join('');
-  }
-
-  const enterpriseFeed=$('#dashboardEnterpriseFeed');
-  if(enterpriseFeed){
-    const corporate=state.waskita.slice(0,3).map(p=>({
-      label:'BUMN · Waskita',
-      title:decodeText(p.title?.rendered||'Publikasi Waskita'),
-      meta:p.date?new Date(p.date).toLocaleDateString('id-ID',{day:'numeric',month:'short'}):'',
-      href:p.link||'https://www.waskita.co.id/'
-    }));
-    const products=state.foodstation.slice(0,3).map(p=>{
-      const minor=10**(Number(p.prices?.currency_minor_unit)||0);
-      const price=(Number(p.prices?.price)||0)/minor;
-      return {
-        label:'BUMD · Food Station',
-        title:decodeText(p.name||'Produk Food Station'),
-        meta:(p.is_in_stock?'Tersedia':'Stok habis')+' · '+idr(price),
-        href:p.permalink||'https://foodstation.id/shop/'
-      };
-    });
-    enterpriseFeed.innerHTML=[...corporate,...products].map(x=>
-      '<a class="feed-row" href="'+esc(x.href)+'" target="_blank" rel="noopener">'+
-        '<div><span>'+esc(x.label)+' · '+esc(x.meta)+'</span><strong>'+esc(x.title)+'</strong></div><b>↗</b></a>'
-    ).join('')||'<div class="empty-inline">Feed BUMN/BUMD belum tersedia.</div>';
-  }
-
-  const healthGrid=$('#dashboardSourceHealth');
-  if(healthGrid){
-    healthGrid.innerHTML=state.sources.map(s=>{
-      const key=sourceStatusKey[s.id];
-      const has=key&&Object.prototype.hasOwnProperty.call(status,key);
-      const ok=has?status[key]===true:null;
-      const label=ok===true?'Healthy':ok===false?'Unavailable':'Unknown';
-      const klass=ok===true?'health-ok':ok===false?'health-bad':'health-unknown';
-      return '<article class="health-card '+klass+'">'+
-        '<div><i></i><span>'+esc(s.ownership||s.level||'Pemerintah')+'</span></div>'+
-        '<strong>'+esc(s.name)+'</strong>'+
-        '<small>'+esc(s.type)+' · '+label+'</small>'+
-      '</article>';
-    }).join('');
-  }
-
-  renderDomainData();
+function statusClass(s){return s==='active'?'ready':s==='probing'?'probing':'blocked'}
+function statusLabel(s){
+  return ({active:'ACTIVE REST',probing:'PROBING',auth_required:'AUTH REQUIRED',access_request:'ACCESS REQUEST',non_rest_public_service:'NON-REST PUBLIC'})[s]||String(s||'UNKNOWN').toUpperCase()
 }
-
-function renderSources(){
-  $('#activeSourceCount').textContent=state.sources.length||'—';
-
-  $('#sourceGrid').innerHTML=state.sources.map(s=>
-    '<article class="source-card panel">'+
-      '<div class="source-head">'+
-        '<span class="source-level">'+esc(s.ownership?`${s.ownership} · PUBLIC`:'PUBLIC · NO AUTH')+'</span>'+
-        '<span class="status-dot status-up"></span>'+
-      '</div>'+
-      '<h3>'+esc(s.name)+'</h3>'+
-      '<p>'+esc(s.description)+'</p>'+
-      '<div class="source-meta"><span>'+esc(s.agency)+'</span><span>'+esc(s.type)+'</span></div>'+
-      ((s.domains||[]).length?'<div class="source-domains">'+s.domains.slice(0,4).map(d=>'<span>'+esc(d)+'</span>').join('')+'</div>':'')+
-      '<a href="'+esc(s.portalUrl)+'" target="_blank" rel="noopener">Sumber resmi ↗</a>'+
-    '</article>'
+function sourceCard(s){
+  return '<article class="investment-source-card '+statusClass(s.status)+'">'+
+    '<div class="investment-source-head"><span>'+esc(s.role)+'</span><b>'+esc(statusLabel(s.status))+'</b></div>'+
+    '<h3>'+esc(s.name)+'</h3>'+
+    '<p>'+esc(s.investment_use||'')+'</p>'+
+    '<div class="source-targets">'+(s.target_data||[]).slice(0,5).map(x=>'<span>'+esc(x)+'</span>').join('')+'</div>'+
+    (s.note?'<small>'+esc(s.note)+'</small>':'')+
+    '<a href="'+esc(s.official_url)+'" target="_blank" rel="noopener">Sumber resmi ↗</a>'+
+  '</article>';
+}
+function renderInstitutionGroups(){
+  const all=state.sources.institutions||[];
+  $('#macroInstitutions').innerHTML=all.filter(x=>['kemenkeu','djp','bi','kemendagri'].includes(x.id)).map(sourceCard).join('');
+  $('#tradeInstitutions').innerHTML=all.filter(x=>['kemendag','djbc','kemenperin'].includes(x.id)).map(sourceCard).join('');
+  $('#sourceMatrix').innerHTML=all.map(sourceCard).join('');
+}
+function coverage(){
+  const all=state.sources.institutions||[];
+  const active=all.filter(x=>x.status==='active');
+  const weight=active.reduce((s,x)=>s+(Number(x.weight)||0),0);
+  return {active,total:all.length,weight,pct:Math.round(weight)};
+}
+function renderCoverage(){
+  const c=coverage();
+  $('#eligibleSources').textContent=c.active.length;
+  $('#coveragePercent').textContent=c.pct+'%';
+  $('#coverageMeter').style.width=Math.min(100,c.pct)+'%';
+  $('#coverageLabel').textContent=c.pct>=70?'Coverage cukup untuk model':'Belum cukup untuk scoring investasi';
+  $('#snapshotTime').textContent=snapshotAge(state.status.generated_at||state.summary.generated_at);
+  $('#modelStatus').textContent=c.pct>=70?'READY':'HOLD';
+  $('#scoreBadge').textContent=c.pct>=70?'MODEL READY':'INSUFFICIENT COVERAGE';
+}
+function factorAvailability(f){
+  const map=Object.fromEntries((state.sources.institutions||[]).map(x=>[x.id,x]));
+  const weights=(f.sources||[]).map(id=>map[id]).filter(Boolean);
+  if(!weights.length)return 0;
+  return weights.filter(x=>x.status==='active').length/weights.length;
+}
+function renderFactors(){
+  const el=$('#factorGrid'); if(!el)return;
+  el.innerHTML=(state.model.factors||[]).map(f=>{
+    const availability=factorAvailability(f), pct=Math.round(availability*100);
+    return '<article class="investment-factor">'+
+      '<div><span>'+esc(f.label)+'</span><strong>'+esc(f.weight)+'%</strong></div>'+
+      '<div class="factor-meter"><i style="width:'+pct+'%"></i></div>'+
+      '<small>'+pct+'% source available · '+esc(f.direction||'')+'</small>'+
+    '</article>';
+  }).join('');
+}
+function renderSourceReadiness(){
+  const el=$('#sourceCoverage');if(!el)return;
+  el.innerHTML=(state.sources.institutions||[]).map(s=>
+    '<div class="source-readiness-row">'+
+      '<div><i class="'+statusClass(s.status)+'"></i><strong>'+esc(s.name)+'</strong><span>'+esc(s.role)+'</span></div>'+
+      '<b>'+esc(s.weight)+'%</b>'+
+      '<small>'+esc(statusLabel(s.status))+'</small>'+
+    '</div>'
   ).join('');
 }
-
-async function loadRegistry(){
-  const r=await json('./data/apis.json');
-  state.sources=(r.sources||[]).filter(s=>s.auth==='none');
-  const enterpriseCount=state.sources.filter(s=>s.ownership==='BUMN'||s.ownership==='BUMD').length;
-  if($('#enterpriseSummaryCount'))$('#enterpriseSummaryCount').textContent=fmt(enterpriseCount);
-  renderSources();
+function themeLabel(k){return ({nickel:'Nikel & Hilirisasi',industrial_estate:'Kawasan Industri',capacity:'Kapasitas Produksi',ev:'Kendaraan Listrik',green_industry:'Industri Hijau'})[k]||k}
+function renderIndustry(){
+  const themes=state.industry.themes||{};
+  const total=Object.values(themes).reduce((s,x)=>s+(Number(x.count)||0),0);
+  $('#industryDatasetCount').textContent=fmt(total);
+  $('#industryHighlights').innerHTML=Object.entries(themes).map(([k,v])=>
+    '<div><span>'+esc(themeLabel(k))+'</span><strong>'+fmt(v.count||0)+'</strong><small>dataset REST</small></div>'
+  ).join('')||'<div class="empty-inline">Data Kemenperin belum tersedia.</div>';
+  $('#industrialThemes').innerHTML=Object.entries(themes).map(([k,v])=>
+    '<article class="industrial-theme-card"><span>'+esc(themeLabel(k))+'</span><strong>'+fmt(v.count||0)+'</strong><small>dataset relevan</small></article>'
+  ).join('');
+  $('#industrialFeed').innerHTML=(state.industry.items||[]).slice(0,10).map(x=>
+    '<a class="feed-row" href="'+esc(x.url||'https://satudata.kemenperin.go.id/')+'" target="_blank" rel="noopener">'+
+      '<div><span>KEMENPERIN · '+esc(x.theme||'industry')+'</span><strong>'+esc(x.title||x.name||'Dataset industri')+'</strong></div><b>↗</b></a>'
+  ).join('');
 }
-
-async function reloadAll(){
-  $('#weatherStatus').textContent='Memuat…';
-  $('#quakeStatus').textContent='Memuat…';
-
-  await Promise.allSettled([
-    loadStatus(),
-    loadBMKG(),
-    loadAdditionalData(),
-    loadEnterpriseData(),
-    loadDomainData(),
-    loadIndicators(),
-    loadDirectStats(),
-    loadRegionalCoverage(),
-    loadRegistry()
-  ]);
-  renderDashboard();
-
-  toast('Data publik dimuat ulang');
+function compactObject(o){
+  const entries=Object.entries(o||{}).filter(([,v])=>v!==null&&v!==''&&typeof v!=='object').slice(0,5);
+  return entries.map(([k,v])=>'<span><b>'+esc(k.replaceAll('_',' '))+'</b>'+esc(v)+'</span>').join('');
 }
-
+function renderEnergy(){
+  const wells=Number(state.energy.well_count)||0,wk=Number(state.energy.working_area_count)||0;
+  $('#wellCount').textContent=fmt(wells);$('#workingAreaCount').textContent=fmt(wk);
+  $('#energyWellCount').textContent=fmt(wells);$('#energyWKCount').textContent=fmt(wk);
+  $('#energyHighlights').innerHTML=
+    '<div><span>Upstream footprint</span><strong>'+fmt(wells)+'</strong><small>sumur pada REST ESDM</small></div>'+
+    '<div><span>WK Migas 2026</span><strong>'+fmt(wk)+'</strong><small>wilayah kerja tahap 1</small></div>'+
+    '<div><span>Source</span><strong>ArcGIS REST</strong><small>official · no auth</small></div>';
+  $('#workingAreaList').innerHTML=(state.energy.working_areas||[]).map(x=>'<article class="investment-detail-row">'+compactObject(x)+'</article>').join('')||'<div class="empty-inline">Detail WK belum tersedia.</div>';
+  $('#wellSampleList').innerHTML=(state.energy.well_samples||[]).map(x=>'<article class="investment-detail-row">'+compactObject(x)+'</article>').join('')||'<div class="empty-inline">Sample sumur belum tersedia.</div>';
+}
+function renderAll(){
+  renderInstitutionGroups();renderCoverage();renderFactors();renderSourceReadiness();renderIndustry();renderEnergy();
+}
+async function loadAll(){
+  const tasks=await Promise.allSettled([json(LIVE.sources),json(LIVE.model),json(LIVE.summary),json(LIVE.industry),json(LIVE.energy),json(LIVE.status)]);
+  if(tasks[0].status==='fulfilled')state.sources=tasks[0].value;
+  if(tasks[1].status==='fulfilled')state.model=tasks[1].value;
+  if(tasks[2].status==='fulfilled')state.summary=tasks[2].value;
+  if(tasks[3].status==='fulfilled')state.industry=tasks[3].value;
+  if(tasks[4].status==='fulfilled')state.energy=tasks[4].value;
+  if(tasks[5].status==='fulfilled')state.status=tasks[5].value;
+  renderAll();
+}
+async function reloadAll(){await loadAll();toast('Investment data diperbarui')}
 function bind(){
   $$('[data-route]').forEach(b=>b.onclick=()=>nav(b.dataset.route));
   addEventListener('hashchange',route);
-
-  $('#themeToggle').onclick=toggleTheme;
-  $('#refreshAll').onclick=reloadAll;
-
-  $$('[data-quake-tab]').forEach(b=>b.onclick=()=>{
-    state.quakeTab=b.dataset.quakeTab;
-    $$('[data-quake-tab]').forEach(x=>x.classList.toggle('active',x===b));
-    renderQuakeList();
-  });
-
-  $$('[data-catalog-tab]').forEach(b=>b.onclick=()=>{
-    state.catalogTab=b.dataset.catalogTab;
-    renderCatalog();
-  });
+  $('#themeToggle').onclick=toggleTheme;$('#refreshAll').onclick=reloadAll;
 }
-
 async function init(){
-  setTheme();
-  bind();
-  route();
-  clock();
-  setInterval(clock,30000);
-
-  await Promise.allSettled([
-    loadRegistry(),
-    loadStatus(),
-    loadBMKG(),
-    loadAdditionalData(),
-    loadEnterpriseData(),
-    loadDomainData(),
-    loadIndicators(),
-    loadDirectStats(),
-    loadRegionalCoverage()
-  ]);
-  renderDashboard();
-
-  if('serviceWorker'in navigator){
-    navigator.serviceWorker.register('./sw.js').catch(()=>{});
-  }
+  setTheme();bind();route();clock();setInterval(clock,30000);
+  await loadAll();
+  if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
-
 init();
