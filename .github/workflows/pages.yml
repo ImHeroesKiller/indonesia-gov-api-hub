@@ -42,10 +42,12 @@ jobs:
           if(dup.length){console.error('Duplicate IDs',[...new Set(dup)]);process.exit(1)}
           const required=[
             'rulesUpdated','overviewPayroll','overviewTax','wageBenchmarkGrid',
-            'regionSelect','sectoralWrap','useSectoral','salaryInput','minimumWageHint',
-            'headcountInput','jkkSelect','includeThr','wageCompliance','totalEmployerCost',
-            'totalEmployerCostPerEmployee','employerBreakdown','employerBpjsCards',
-            'employeeNetBeforeTax','employeeDeductions','entitySelect','revenueInput',
+            'regionSelect','sectoralWrap','useSectoral','minimumWageOverride',
+            'projectWorkdays','jkkSelect','includeThr','minimumWageHint',
+            'payrollTable','payrollTableBody','payrollTableFoot','resetPayrollTable',
+            'tableTotalHC','tableRevenue','tableBaseWage','tableBpjsEmployer',
+            'tableEmploymentCost','tableGrossContribution','tableGrossMargin',
+            'employerBpjsCards','payrollTableNotes','entitySelect','revenueInput',
             'profitInput','taxRuleHint','incomeTaxResult','incomeTaxMethod',
             'incomeTaxEffective','incomeTaxMonthly','vatBaseInput','vatTypeSelect',
             'vatResult','vatMethod','withholdingGrid','sourceList'
