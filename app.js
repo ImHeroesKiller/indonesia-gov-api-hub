@@ -16,7 +16,8 @@ const state={
   waskita:[],
   status:null,
   domainSummary:{thematic:{},operational:{}},
-  indicatorSummary:{indicators:[]}
+  indicatorSummary:{indicators:[]},
+  directStats:{}
 };
 
 const LIVE={
@@ -33,6 +34,7 @@ const LIVE={
   waskita:'./live/waskita-posts.json',
   domainSummary:'./live/domain-summary.json',
   indicators:'./live/indicator-summary.json',
+  directStats:'./live/direct-stats.json',
   status:'./live/status.json'
 };
 
@@ -621,6 +623,36 @@ const indicatorMeta={
   'agriculture-production':'Produksi Pertanian'
 };
 
+function statLatest(series=[]){return [...series].sort((a,b)=>String(b.year||'').localeCompare(String(a.year||'')))[0]||null}
+function compactIDR(v){return new Intl.NumberFormat('id-ID',{notation:'compact',maximumFractionDigits:1}).format(Number(v)||0)}
+function directStatCards(){
+  const d=state.directStats||{}, unemployment=[...(d.employment?.records||[])].sort((a,b)=>b.value-a.value);
+  const smk=statLatest(d.education?.series), beds=statLatest(d.health?.series), waste=statLatest(d.environment?.series);
+  const revenue=(d.revenue?.records||[]).reduce((s,x)=>s+(Number(x.value_thousand)||0),0)*1000;
+  const agri=(d.agriculture?.records||[]).reduce((s,x)=>s+(Number(x.value)||0),0);
+  const ihk=[...(d.ihk?.records||[])].sort((a,b)=>(b.year-a.year)||(b.value-a.value))[0];
+  const food=[...(d.food_prices?.products||[])].sort((a,b)=>a.price-b.price)[0];
+  return [
+    {label:'Pengangguran',value:unemployment[0]?unemployment[0].value.toLocaleString('id-ID')+'%':'—',meta:unemployment[0]?unemployment[0].area+' · '+d.employment.year:'Banten'},
+    {label:'Kemiskinan',value:d.poverty?.record?fmt(d.poverty.record.value)+' rb':'—',meta:'Banten · '+(d.poverty?.year||'')},
+    {label:'Pendapatan Daerah',value:revenue?'Rp '+compactIDR(revenue):'—',meta:'Banten · '+(d.revenue?.year||'')},
+    {label:'SMK',value:smk?fmt(smk.value):'—',meta:'sekolah · '+(smk?.year||'')},
+    {label:'Tempat Tidur RS',value:beds?fmt(beds.value):'—',meta:'unit · '+(beds?.year||'')},
+    {label:'Sampah Tertangani',value:waste?fmt(waste.value):'—',meta:'ton · '+(waste?.year||'')},
+    {label:'Produksi Perkebunan',value:agri?compactIDR(agri):'—',meta:'ton · '+(d.agriculture?.year||'')},
+    {label:'IHK',value:ihk?ihk.value.toLocaleString('id-ID'):'—',meta:(ihk?.city||'Banten')+' · '+(ihk?.year||'')},
+    {label:'Harga Pangan',value:food?'Rp '+fmt(food.price):'—',meta:food?.name||'Food Station'}
+  ];
+}
+function renderDirectStats(){
+  const cards=directStatCards();
+  for(const id of ['dashboardDirectStats','directStatsDetail']){
+    const el=$('#'+id); if(!el)continue;
+    el.innerHTML=cards.map(x=>'<article class="direct-stat-card"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>'+esc(x.meta)+'</small></article>').join('');
+  }
+}
+async function loadDirectStats(){try{state.directStats=await json(LIVE.directStats,15000)}catch{state.directStats={}} renderDirectStats()}
+
 function renderIndicators(){
   const el=$('#indicatorGrid');
   if(!el)return;
@@ -858,6 +890,7 @@ async function reloadAll(){
     loadEnterpriseData(),
     loadDomainData(),
     loadIndicators(),
+    loadDirectStats(),
     loadRegistry()
   ]);
   renderDashboard();
@@ -898,7 +931,8 @@ async function init(){
     loadAdditionalData(),
     loadEnterpriseData(),
     loadDomainData(),
-    loadIndicators()
+    loadIndicators(),
+    loadDirectStats()
   ]);
   renderDashboard();
 
