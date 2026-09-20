@@ -16,7 +16,7 @@ permissions:
 
 concurrency:
   group: nusadata-github-pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -201,13 +201,21 @@ jobs:
             jt="tmp-domains/indicator-${slug}-jateng.json"
             kt="tmp-domains/indicator-${slug}-kaltim.json"
 
-            curl_json_optional "https://data.bantenprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$b"
-            curl_json_optional "https://opendata.grobogan.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$g"
-            curl_json_optional "https://data.acehprov.go.id/id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$ac"
-            curl_json_optional "https://data.sumbarprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$sb"
-            curl_json_optional "https://opendata.sumselprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$ss"
-            curl_json_optional "https://data.jatengprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$jt"
-            curl_json_optional "https://data.kaltimprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$kt"
+            curl_json_optional "https://data.bantenprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$b" &
+            p1=$!
+            curl_json_optional "https://opendata.grobogan.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$g" &
+            p2=$!
+            curl_json_optional "https://data.acehprov.go.id/id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$ac" &
+            p3=$!
+            curl_json_optional "https://data.sumbarprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$sb" &
+            p4=$!
+            curl_json_optional "https://opendata.sumselprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$ss" &
+            p5=$!
+            curl_json_optional "https://data.jatengprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$jt" &
+            p6=$!
+            curl_json_optional "https://data.kaltimprov.go.id/api/3/action/package_search?q=${encoded}&rows=8&sort=metadata_modified%20desc" "$kt" &
+            p7=$!
+            wait "$p1" "$p2" "$p3" "$p4" "$p5" "$p6" "$p7"
 
             jq -n --arg slug "$slug" --arg query "$query" \
               --slurpfile b "$b" --slurpfile g "$g" --slurpfile ac "$ac" \
