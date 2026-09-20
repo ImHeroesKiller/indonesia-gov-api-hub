@@ -682,6 +682,7 @@ async function loadDomainData(){
     state.domainSummary={thematic:{},operational:{}};
   }
   renderDomainData();
+  renderDirectStats();
 }
 
 const sourceStatusKey={
