@@ -6,8 +6,7 @@ const state={
   summary:{},
   industry:{available:false,themes:{},items:[]},
   energy:{well_count:0,working_area_count:0,well_samples:[],working_areas:[]},
-  status:{},
-  regional:{regions:[]}
+  status:{}
 };
 
 const LIVE={
@@ -16,8 +15,7 @@ const LIVE={
   summary:'./live/investment-summary.json',
   industry:'./live/investment-industry.json',
   energy:'./live/investment-energy.json',
-  status:'./live/investment-status.json',
-  regional:'./live/regional-summary.json'
+  status:'./live/investment-status.json'
 };
 
 const esc=v=>String(v??'')
@@ -261,7 +259,6 @@ function renderAll(){
   renderSourceReadiness();
   renderIndustry();
   renderEnergy();
-  renderRegionalInvestment();
 }
 async function loadAll(){
   const tasks=await Promise.allSettled([
@@ -270,8 +267,7 @@ async function loadAll(){
     json(LIVE.summary),
     json(LIVE.industry),
     json(LIVE.energy),
-    json(LIVE.status),
-    json(LIVE.regional)
+    json(LIVE.status)
   ]);
   if(tasks[0].status==='fulfilled')state.sources=tasks[0].value;
   if(tasks[1].status==='fulfilled')state.model=tasks[1].value;
@@ -279,7 +275,6 @@ async function loadAll(){
   if(tasks[3].status==='fulfilled')state.industry=tasks[3].value;
   if(tasks[4].status==='fulfilled')state.energy=tasks[4].value;
   if(tasks[5].status==='fulfilled')state.status=tasks[5].value;
-  if(tasks[6].status==='fulfilled')state.regional=tasks[6].value;
   renderAll();
 }
 async function reloadAll(){await loadAll();toast('Investment data diperbarui')}
