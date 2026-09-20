@@ -14,7 +14,8 @@ const state={
   foodstation:[],
   pamComplaints:[],
   waskita:[],
-  status:null
+  status:null,
+  domainSummary:{thematic:{},operational:{}}
 };
 
 const LIVE={
@@ -29,6 +30,7 @@ const LIVE={
   foodstation:'./live/foodstation-products.json',
   pamjaya:'./live/pamjaya-complaints.json',
   waskita:'./live/waskita-posts.json',
+  domainSummary:'./live/domain-summary.json',
   status:'./live/status.json'
 };
 
@@ -501,6 +503,120 @@ async function loadEnterpriseData(){
 }
 
 
+
+const domainMeta={
+  education:{label:'Pendidikan',note:'sekolah, peserta didik, layanan pendidikan'},
+  health:{label:'Kesehatan',note:'fasilitas, penyakit, layanan kesehatan'},
+  economy:{label:'Ekonomi',note:'aktivitas ekonomi dan indikator daerah'},
+  environment:{label:'Lingkungan',note:'lingkungan hidup dan pengelolaan wilayah'},
+  agriculture:{label:'Pertanian & Pangan',note:'pertanian, komoditas dan pangan'},
+  demography:{label:'Demografi',note:'penduduk dan kependudukan'},
+  social:{label:'Sosial',note:'kemiskinan dan kesejahteraan sosial'},
+  employment:{label:'Ketenagakerjaan',note:'tenaga kerja dan kesempatan kerja'},
+  finance:{label:'Keuangan',note:'keuangan dan fiskal daerah'}
+};
+
+function operationalCards(){
+  const op=state.domainSummary?.operational||{};
+  const topMode=op.transport?.modes?.[0];
+  return [
+    {
+      key:'transport',label:'Transportasi Jakarta',
+      value:op.transport?.count||0,unit:'titik',
+      meta:topMode?topMode.name+' · '+fmt(topMode.count):'moda publik'
+    },
+    {
+      key:'roads',label:'Jaringan Jalan DKI',
+      value:op.roads?.count||0,unit:'fitur',
+      meta:'Peta Dasar DKI'
+    },
+    {
+      key:'rdtr',label:'RDTR Jakarta',
+      value:op.rdtr?.count||0,unit:'fitur',
+      meta:'rencana pola ruang'
+    },
+    {
+      key:'oil_gas_wells',label:'Sumur Migas ESDM',
+      value:op.oil_gas_wells?.count||0,unit:'sumur',
+      meta:'Data Migas ArcGIS'
+    },
+    {
+      key:'oil_gas_working_areas_2026',label:'WK Migas 2026',
+      value:op.oil_gas_working_areas_2026?.count||0,unit:'wilayah kerja',
+      meta:'tahap 1'
+    }
+  ];
+}
+
+function renderDomainData(){
+  const thematic=state.domainSummary?.thematic||{};
+  const domains=Object.entries(domainMeta).map(([key,meta])=>({
+    key,
+    ...meta,
+    count:Number(thematic[key]?.count)||0,
+    banten:Number(thematic[key]?.sources?.banten)||0,
+    grobogan:Number(thematic[key]?.sources?.grobogan)||0,
+    latest:thematic[key]?.items?.[0]
+  }));
+
+  const domainMarkup=domains.map(d=>
+    '<article class="domain-card">'+
+      '<div class="domain-card-head"><span>'+esc(d.label)+'</span><strong>'+fmt(d.count)+'</strong></div>'+
+      '<small>Banten '+fmt(d.banten)+' · Grobogan '+fmt(d.grobogan)+'</small>'+
+      '<p>'+esc(d.latest?.title||d.note)+'</p>'+
+    '</article>'
+  ).join('');
+
+  const dg=$('#dashboardDomainGrid');
+  if(dg)dg.innerHTML=domainMarkup||'<div class="empty-inline">Domain tematik belum tersedia.</div>';
+  const eg=$('#domainExplorerGrid');
+  if(eg)eg.innerHTML=domainMarkup||'<div class="empty-inline">Domain tematik belum tersedia.</div>';
+
+  const ops=operationalCards();
+  const opMarkup=ops.map(o=>
+    '<article class="operational-card">'+
+      '<span>'+esc(o.label)+'</span>'+
+      '<strong>'+fmt(o.value)+'</strong>'+
+      '<small>'+esc(o.unit)+' · '+esc(o.meta)+'</small>'+
+    '</article>'
+  ).join('');
+
+  const dop=$('#dashboardOperationalDomains');
+  if(dop)dop.innerHTML=opMarkup;
+  const eop=$('#domainOperationalGrid');
+  if(eop)eop.innerHTML=opMarkup;
+
+  const latest=Object.entries(thematic)
+    .flatMap(([key,d])=>(d.items||[]).map(item=>({...item,_domain:key})))
+    .sort((a,b)=>new Date(b.metadata_modified||0)-new Date(a.metadata_modified||0))
+    .filter((item,index,arr)=>arr.findIndex(x=>(x.id||x.name)===(item.id||item.name))===index)
+    .slice(0,10);
+
+  const feed=$('#domainLatestFeed');
+  if(feed){
+    feed.innerHTML=latest.length?latest.map(item=>{
+      const meta=domainMeta[item._domain]||{label:item._domain};
+      const date=item.metadata_modified
+        ?new Date(item.metadata_modified).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})
+        :'—';
+      const key=item.source_key||'banten';
+      return '<a class="feed-row" href="'+esc(catalogBase(key)+(item.name||''))+'" target="_blank" rel="noopener">'+
+        '<div><span>'+esc(meta.label)+' · '+esc(item.source||'Open Data')+' · '+esc(date)+'</span>'+
+        '<strong>'+esc(item.title||item.name||'Dataset')+'</strong></div><b>↗</b></a>';
+    }).join(''):'<div class="empty-inline">Dataset tematik belum tersedia.</div>';
+  }
+}
+
+async function loadDomainData(){
+  try{
+    const d=await json(LIVE.domainSummary,15000);
+    state.domainSummary=d&&typeof d==='object'?d:{thematic:{},operational:{}};
+  }catch{
+    state.domainSummary={thematic:{},operational:{}};
+  }
+  renderDomainData();
+}
+
 const sourceStatusKey={
   'bmkg-weather':'bmkg_weather',
   'bmkg-earthquake':'bmkg_earthquake',
@@ -509,7 +625,11 @@ const sourceStatusKey={
   'grobogan-ckan':'grobogan_ckan',
   'foodstation-store':'foodstation_store',
   'pamjaya-complaints':'pamjaya_complaints',
-  'waskita-posts':'waskita_posts'
+  'waskita-posts':'waskita_posts',
+  'jakarta-transport':'jakarta_transport',
+  'jakarta-roads':'jakarta_roads',
+  'jakarta-rdtr':'jakarta_rdtr',
+  'esdm-migas':'esdm_migas'
 };
 
 function setText(id,value){
@@ -559,7 +679,11 @@ function renderDashboard(){
     {label:'PAM JAYA',value:pamRows.length,unit:'wilayah'},
     {label:'Food Station',value:state.foodstation.length,unit:'produk'},
     {label:'Waskita',value:state.waskita.length,unit:'publikasi'},
-    {label:'Gempa M5+',value:state.m5.length,unit:'kejadian'}
+    {label:'Gempa M5+',value:state.m5.length,unit:'kejadian'},
+    {label:'Transport Jakarta',value:state.domainSummary?.operational?.transport?.count,unit:'titik'},
+    {label:'Jalan DKI',value:state.domainSummary?.operational?.roads?.count,unit:'fitur'},
+    {label:'RDTR DKI',value:state.domainSummary?.operational?.rdtr?.count,unit:'fitur'},
+    {label:'Sumur Migas',value:state.domainSummary?.operational?.oil_gas_wells?.count,unit:'sumur'}
   ].filter(x=>Number(x.value)>0);
 
   const maxLog=Math.max(1,...collections.map(x=>Math.log10(Number(x.value)+1)));
@@ -658,6 +782,8 @@ function renderDashboard(){
       '</article>';
     }).join('');
   }
+
+  renderDomainData();
 }
 
 function renderSources(){
@@ -672,6 +798,7 @@ function renderSources(){
       '<h3>'+esc(s.name)+'</h3>'+
       '<p>'+esc(s.description)+'</p>'+
       '<div class="source-meta"><span>'+esc(s.agency)+'</span><span>'+esc(s.type)+'</span></div>'+
+      ((s.domains||[]).length?'<div class="source-domains">'+s.domains.slice(0,4).map(d=>'<span>'+esc(d)+'</span>').join('')+'</div>':'')+
       '<a href="'+esc(s.portalUrl)+'" target="_blank" rel="noopener">Sumber resmi ↗</a>'+
     '</article>'
   ).join('');
@@ -694,6 +821,7 @@ async function reloadAll(){
     loadBMKG(),
     loadAdditionalData(),
     loadEnterpriseData(),
+    loadDomainData(),
     loadRegistry()
   ]);
   renderDashboard();
@@ -732,7 +860,8 @@ async function init(){
     loadStatus(),
     loadBMKG(),
     loadAdditionalData(),
-    loadEnterpriseData()
+    loadEnterpriseData(),
+    loadDomainData()
   ]);
   renderDashboard();
 
