@@ -41,7 +41,7 @@ function snapshotAge(v){
 }
 function statusClass(s){return s==='active'?'ready':s==='probing'?'probing':'blocked'}
 function statusLabel(s){
-  return ({active:'ACTIVE REST',probing:'PROBING',auth_required:'AUTH REQUIRED',access_request:'ACCESS REQUEST',non_rest_public_service:'NON-REST PUBLIC'})[s]||String(s||'UNKNOWN').toUpperCase()
+  return ({active:'ACTIVE REST',probing:'PROBING',unreachable:'TEMP UNREACHABLE',auth_required:'AUTH REQUIRED',access_request:'ACCESS REQUEST',non_rest_public_service:'NON-REST PUBLIC'})[s]||String(s||'UNKNOWN').toUpperCase()
 }
 function sourceCard(s){
   return '<article class="investment-source-card '+statusClass(s.status)+'">'+
@@ -100,7 +100,7 @@ function renderSourceReadiness(){
       '<b>'+esc(s.weight)+'%</b>'+
       '<small>'+esc(statusLabel(s.status))+'</small>'+
     '</div>'
-  ).join('');
+  ).join('')||(state.industry.available===false?'<div class="empty-inline">Kemenperin REST terdokumentasi publik, tetapi saat ini tidak dapat dijangkau dari deployment runner. Feed dikeluarkan dari scoring sampai pulih.</div>':'');
 }
 function themeLabel(k){return ({nickel:'Nikel & Hilirisasi',industrial_estate:'Kawasan Industri',capacity:'Kapasitas Produksi',ev:'Kendaraan Listrik',green_industry:'Industri Hijau'})[k]||k}
 function renderIndustry(){
