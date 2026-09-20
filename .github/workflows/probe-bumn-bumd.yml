@@ -1,0 +1,64 @@
+name: Probe BUMN BUMD Public REST
+
+on:
+  push:
+    paths:
+      - ".github/workflows/probe-bumn-bumd.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect public sites and API candidates
+        shell: bash
+        run: |
+          set +e
+
+          inspect_site () {
+            name="$1"
+            url="$2"
+            echo "===== SITE $name ====="
+            tmp=$(mktemp)
+            curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0 NusaData-Probe" -sS "$url" -o "$tmp"
+            echo "-- api-like refs --"
+            grep -Eo 'https?://[^"'\'' <>)]+' "$tmp" | grep -Ei '(api|json|graphql|rest)' | head -n 30 || true
+            echo "-- script refs --"
+            grep -Eo '<script[^>]+src=["'\''][^"'\'']+' "$tmp" | sed -E 's/.*src=["'\'']//' | head -n 20 || true
+            rm -f "$tmp"
+          }
+
+          probe () {
+            name="$1"
+            url="$2"
+            echo "===== API $name ====="
+            tmp=$(mktemp)
+            code=$(curl -L --retry 1 --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -H "Accept: application/json"               -sS -w "%{http_code}" -o "$tmp" "$url")
+            echo "HTTP=$code"
+            ctype=$(file -b --mime-type "$tmp" 2>/dev/null)
+            echo "MIME=$ctype"
+            if jq -e . "$tmp" >/dev/null 2>&1; then
+              echo "JSON=valid"
+              jq -c 'if type=="object" then keys else type end' "$tmp" | head -c 1000
+              echo
+              jq -c '.' "$tmp" | head -c 2000
+              echo
+            else
+              echo "JSON=invalid"
+              head -c 500 "$tmp"
+              echo
+            fi
+            rm -f "$tmp"
+          }
+
+          inspect_site "KAI" "https://www.kai.id/"
+          inspect_site "TransJakarta routes" "https://www.transjakarta.co.id/rute"
+          inspect_site "MRT Jakarta" "https://jakartamrt.co.id/"
+          inspect_site "Jasa Marga" "https://www.jasamarga.com/"
+
+          probe "KAI API root" "https://api.kai.id/"
+          probe "TransJakarta API root" "https://api.transjakarta.co.id/"
+          probe "MRT API root" "https://api.jakartamrt.co.id/"
+          probe "Pos Indonesia sandbox docs root" "https://fintech-sbx.posindonesia.co.id/"
