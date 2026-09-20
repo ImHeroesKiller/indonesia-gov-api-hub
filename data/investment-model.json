@@ -1,0 +1,89 @@
+{
+  "version": "1.0",
+  "name": "Investment Signal Engine",
+  "min_coverage_for_score": 0.7,
+  "factors": [
+    {
+      "id": "macro",
+      "label": "Macro & Monetary",
+      "weight": 20,
+      "sources": [
+        "bi"
+      ],
+      "direction": "lower funding stress and stable currency are positive"
+    },
+    {
+      "id": "fiscal",
+      "label": "Fiscal & Regional Capacity",
+      "weight": 15,
+      "sources": [
+        "kemenkeu",
+        "kemendagri"
+      ],
+      "direction": "stronger realization and productive capex are positive"
+    },
+    {
+      "id": "trade",
+      "label": "Trade Momentum",
+      "weight": 20,
+      "sources": [
+        "kemendag",
+        "djbc"
+      ],
+      "direction": "export growth, capital/raw-material flow and healthy trade balance are positive"
+    },
+    {
+      "id": "industry",
+      "label": "Industrial Capacity",
+      "weight": 20,
+      "sources": [
+        "kemenperin"
+      ],
+      "direction": "capacity, industrial estates and downstream depth are positive"
+    },
+    {
+      "id": "energy",
+      "label": "Energy & Resource Depth",
+      "weight": 15,
+      "sources": [
+        "esdm"
+      ],
+      "direction": "resource availability and energy infrastructure are positive"
+    },
+    {
+      "id": "tax",
+      "label": "Tax & Customs Friction",
+      "weight": 10,
+      "sources": [
+        "djp",
+        "djbc"
+      ],
+      "direction": "predictable burden, incentives and lower trade friction are positive"
+    }
+  ],
+  "output": {
+    "score_range": [
+      0,
+      100
+    ],
+    "labels": [
+      {
+        "min": 80,
+        "label": "Strong data-supported signal"
+      },
+      {
+        "min": 65,
+        "label": "Positive data-supported signal"
+      },
+      {
+        "min": 50,
+        "label": "Neutral / mixed"
+      },
+      {
+        "min": 0,
+        "label": "Weak / incomplete"
+      }
+    ],
+    "disclaimer": "Screening indicator, not a return forecast or investment recommendation."
+  }
+}
