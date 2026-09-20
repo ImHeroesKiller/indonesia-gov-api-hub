@@ -1,12 +1,27 @@
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 
-const state={sources:[],weather:null,latestQuake:null,m5:[],felt:[],quakeTab:'m5'};
+const state={
+  sources:[],
+  weather:null,
+  latestQuake:null,
+  m5:[],
+  felt:[],
+  quakeTab:'m5',
+  bigCount:0,
+  bigSamples:[],
+  catalogs:{banten:{count:0,items:[]},grobogan:{count:0,items:[]}},
+  catalogTab:'banten'
+};
 
 const LIVE={
   weather:'./live/weather-kemayoran.json',
   latest:'./live/earthquake-latest.json',
   m5:'./live/earthquake-m5.json',
   felt:'./live/earthquake-felt.json',
+  bigCount:'./live/big-village-count.json',
+  bigSample:'./live/big-village-sample.json',
+  banten:'./live/banten-datasets.json',
+  grobogan:'./live/grobogan-datasets.json',
   status:'./live/status.json'
 };
 
@@ -15,14 +30,19 @@ const esc=v=>String(v??'')
   .replaceAll('>','&gt;').replaceAll('"','&quot;')
   .replaceAll("'","&#039;");
 
+const fmt=v=>new Intl.NumberFormat('id-ID').format(Number(v)||0);
+
 function toast(m){
-  const e=$('#toast');e.textContent=m;e.classList.add('show');
-  clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2200);
+  const e=$('#toast');
+  e.textContent=m;
+  e.classList.add('show');
+  clearTimeout(toast.t);
+  toast.t=setTimeout(()=>e.classList.remove('show'),2200);
 }
 
 function route(){
   const requested=location.hash.slice(1)||'dashboard';
-  const valid=['dashboard','weather','earthquake','sources'];
+  const valid=['dashboard','weather','earthquake','data','sources'];
   const r=valid.includes(requested)?requested:'dashboard';
   $$('.view').forEach(v=>v.classList.toggle('active',v.dataset.view===r));
   $$('[data-route]').forEach(b=>b.classList.toggle('active',b.dataset.route===r));
@@ -48,11 +68,15 @@ async function json(url,timeout=12000){
   try{
     const sep=url.includes('?')?'&':'?';
     const r=await fetch(url+sep+'_ts='+Date.now(),{
-      signal:c.signal,cache:'no-store',headers:{Accept:'application/json'}
+      signal:c.signal,
+      cache:'no-store',
+      headers:{Accept:'application/json'}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
     return await r.json();
-  }finally{clearTimeout(t)}
+  }finally{
+    clearTimeout(t);
+  }
 }
 
 function clock(){
@@ -70,7 +94,9 @@ function weatherRows(p){
   return d.flat(Infinity).filter(x=>x&&typeof x==='object'&&('t'in x||'weather_desc'in x));
 }
 
-function weatherLoc(p){return p?.lokasi||p?.data?.[0]?.lokasi||{}}
+function weatherLoc(p){
+  return p?.lokasi||p?.data?.[0]?.lokasi||{};
+}
 
 function nextForecast(rows){
   const now=Date.now();
@@ -98,7 +124,11 @@ function timeLabel(v){
 function fullTimeLabel(v){
   const d=parseLocalTime(v);
   return d?d.toLocaleString('id-ID',{
-    weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'
+    weekday:'short',
+    day:'numeric',
+    month:'short',
+    hour:'2-digit',
+    minute:'2-digit'
   }):'—';
 }
 
@@ -110,7 +140,8 @@ function renderWeather(p,full=false){
     $('#weatherNow').classList.remove('skeleton-block');
     $('#weatherNow').innerHTML=
       '<div class="weather-icon">'+weatherIcon(now.weather_desc)+'</div>'+
-      '<div><strong>'+esc(now.t)+'°</strong><span>'+esc(now.weather_desc||'—')+'</span>'+
+      '<div><strong>'+esc(now.t)+'°</strong>'+
+      '<span>'+esc(now.weather_desc||'—')+'</span>'+
       '<small>'+esc(loc.desa||loc.kecamatan||'Kemayoran')+', '+esc(loc.kotkab||loc.provinsi||'DKI Jakarta')+'</small></div>'+
       '<div class="weather-facts"><span>💧 '+esc(now.hu)+'%</span><span>↝ '+esc(now.ws)+' km/j</span></div>';
 
@@ -118,6 +149,7 @@ function renderWeather(p,full=false){
       '<div><span>'+timeLabel(x.local_datetime||x.datetime)+'</span>'+
       '<b>'+weatherIcon(x.weather_desc)+' '+esc(x.t)+'°</b></div>'
     ).join('');
+
     $('#weatherStatus').textContent='Verified';
   }else{
     $('#weatherLocation').innerHTML=
@@ -128,7 +160,8 @@ function renderWeather(p,full=false){
       '<article class="forecast-item">'+
       '<time>'+fullTimeLabel(x.local_datetime||x.datetime)+'</time>'+
       '<div class="forecast-icon">'+weatherIcon(x.weather_desc)+'</div>'+
-      '<strong>'+esc(x.t)+'°C</strong><span>'+esc(x.weather_desc||'—')+'</span>'+
+      '<strong>'+esc(x.t)+'°C</strong>'+
+      '<span>'+esc(x.weather_desc||'—')+'</span>'+
       '<small>Kelembapan '+esc(x.hu)+'% · Angin '+esc(x.ws)+' km/j</small>'+
       '</article>'
     ).join('');
@@ -140,29 +173,37 @@ function quakeObj(p){return p?.Infogempa?.gempa}
 function quakeCard(q){
   return '<article class="quake-row">'+
     '<div class="mag">M<strong>'+esc(q.Magnitude)+'</strong></div>'+
-    '<div class="quake-copy"><strong>'+esc(q.Wilayah)+'</strong>'+
+    '<div class="quake-copy">'+
+    '<strong>'+esc(q.Wilayah)+'</strong>'+
     '<span>'+esc(q.Tanggal)+' · '+esc(q.Jam)+' · Kedalaman '+esc(q.Kedalaman)+'</span>'+
-    '<small>'+esc(q.Potensi||q.Dirasakan||'')+'</small></div>'+
+    '<small>'+esc(q.Potensi||q.Dirasakan||'')+'</small>'+
+    '</div>'+
   '</article>';
 }
 
 function renderLatestQuake(q){
   if(!q)throw new Error('Data gempa kosong');
+
   $('#latestQuake').classList.remove('skeleton-block');
   $('#latestQuake').innerHTML=
     '<div class="magnitude"><span>M</span><strong>'+esc(q.Magnitude)+'</strong></div>'+
-    '<div class="quake-copy"><strong>'+esc(q.Wilayah)+'</strong>'+
-    '<span>'+esc(q.Tanggal)+' · '+esc(q.Jam)+'</span>'+
-    '<small>Kedalaman '+esc(q.Kedalaman)+' · '+esc(q.Potensi||'')+'</small></div>';
+    '<div class="quake-copy">'+
+      '<strong>'+esc(q.Wilayah)+'</strong>'+
+      '<span>'+esc(q.Tanggal)+' · '+esc(q.Jam)+'</span>'+
+      '<small>Kedalaman '+esc(q.Kedalaman)+' · '+esc(q.Potensi||'')+'</small>'+
+    '</div>';
 
   $('#quakeStatus').textContent='Verified';
+
   $('#quakeHero').innerHTML=
     '<div class="magnitude big"><span>M</span><strong>'+esc(q.Magnitude)+'</strong></div>'+
-    '<div><span class="kicker">GEMPA TERBARU</span><h2>'+esc(q.Wilayah)+'</h2>'+
-    '<p>'+esc(q.Tanggal)+' · '+esc(q.Jam)+' · Kedalaman '+esc(q.Kedalaman)+'</p>'+
-    '<div class="tag-line"><span>'+esc(q.Potensi||'')+'</span>'+
-    (q.Dirasakan?'<span>Dirasakan: '+esc(q.Dirasakan)+'</span>':'')+
-    '</div></div>';
+    '<div><span class="kicker">GEMPA TERBARU</span>'+
+      '<h2>'+esc(q.Wilayah)+'</h2>'+
+      '<p>'+esc(q.Tanggal)+' · '+esc(q.Jam)+' · Kedalaman '+esc(q.Kedalaman)+'</p>'+
+      '<div class="tag-line"><span>'+esc(q.Potensi||'')+'</span>'+
+      (q.Dirasakan?'<span>Dirasakan: '+esc(q.Dirasakan)+'</span>':'')+
+      '</div>'+
+    '</div>';
 }
 
 function renderQuakeList(){
@@ -172,7 +213,9 @@ function renderQuakeList(){
     :'<div class="empty-inline">Data belum tersedia.</div>';
 }
 
-function errorBox(m){return '<div class="error-box">'+esc(m)+'</div>'}
+function errorBox(m){
+  return '<div class="error-box">'+esc(m)+'</div>';
+}
 
 async function loadStatus(){
   try{
@@ -180,7 +223,11 @@ async function loadStatus(){
     if(s.generated_at){
       const d=new Date(s.generated_at);
       const label='Snapshot '+d.toLocaleString('id-ID',{
-        day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Jakarta'
+        day:'numeric',
+        month:'short',
+        hour:'2-digit',
+        minute:'2-digit',
+        timeZone:'Asia/Jakarta'
       })+' WIB';
       $('#weatherStatus').title=label;
       $('#quakeStatus').title=label;
@@ -190,13 +237,18 @@ async function loadStatus(){
 
 async function loadBMKG(){
   const tasks=await Promise.allSettled([
-    json(LIVE.weather),json(LIVE.latest),json(LIVE.m5),json(LIVE.felt)
+    json(LIVE.weather),
+    json(LIVE.latest),
+    json(LIVE.m5),
+    json(LIVE.felt)
   ]);
 
-  if(tasks[0].status==='fulfilled'&&!tasks[0].value?.unavailable){
+  if(tasks[0].status==='fulfilled'){
     state.weather=tasks[0].value;
-    try{renderWeather(state.weather);renderWeather(state.weather,true)}
-    catch(e){
+    try{
+      renderWeather(state.weather);
+      renderWeather(state.weather,true);
+    }catch(e){
       $('#weatherStatus').textContent='Invalid';
       $('#weatherNow').classList.remove('skeleton-block');
       $('#weatherNow').innerHTML=errorBox(e.message);
@@ -208,10 +260,11 @@ async function loadBMKG(){
     $('#weatherDetail').innerHTML=errorBox('Data cuaca belum tersedia.');
   }
 
-  if(tasks[1].status==='fulfilled'&&!tasks[1].value?.unavailable){
+  if(tasks[1].status==='fulfilled'){
     state.latestQuake=quakeObj(tasks[1].value);
-    try{renderLatestQuake(state.latestQuake)}
-    catch(e){
+    try{
+      renderLatestQuake(state.latestQuake);
+    }catch(e){
       $('#quakeStatus').textContent='Invalid';
       $('#latestQuake').classList.remove('skeleton-block');
       $('#latestQuake').innerHTML=errorBox(e.message);
@@ -223,25 +276,152 @@ async function loadBMKG(){
     $('#quakeHero').innerHTML=errorBox('Data gempa terbaru belum tersedia.');
   }
 
-  const m5=tasks[2].status==='fulfilled'&&!tasks[2].value?.unavailable?quakeObj(tasks[2].value):[];
-  const felt=tasks[3].status==='fulfilled'&&!tasks[3].value?.unavailable?quakeObj(tasks[3].value):[];
+  const m5=tasks[2].status==='fulfilled'?quakeObj(tasks[2].value):[];
+  const felt=tasks[3].status==='fulfilled'?quakeObj(tasks[3].value):[];
+
   state.m5=Array.isArray(m5)?m5:(m5?[m5]:[]);
   state.felt=Array.isArray(felt)?felt:(felt?[felt]:[]);
 
   $('#dashboardQuakes').innerHTML=state.m5.slice(0,6).map(quakeCard).join('')||
     '<div class="empty-inline">Data gempa belum tersedia.</div>';
+
   renderQuakeList();
+}
+
+function renderBIG(){
+  $('#bigSummaryCount').textContent=fmt(state.bigCount);
+  $('#bigCount').textContent=fmt(state.bigCount);
+  $('#bigSampleCount').textContent=fmt(state.bigSamples.length);
+
+  $('#bigSamples').innerHTML=state.bigSamples.length
+    ?state.bigSamples.map(x=>{
+      const a=x.attributes||{};
+      return '<article class="region-row">'+
+        '<div><strong>'+esc(a.WADMKD||a.NAMOBJ||'—')+'</strong>'+
+        '<span>'+esc([a.WADMKC,a.WADMKK,a.WADMPR].filter(Boolean).join(' · '))+'</span></div>'+
+        '<code>'+esc(a.KDEPUM||'—')+'</code>'+
+      '</article>';
+    }).join('')
+    :'<div class="empty-inline">Data contoh wilayah belum tersedia.</div>';
+}
+
+function cleanText(v=''){
+  return String(v).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function catalogName(key){
+  return key==='banten'?'Satu Data Banten':'Open Data Grobogan';
+}
+
+function catalogBase(key){
+  return key==='banten'
+    ?'https://data.bantenprov.go.id/dataset/'
+    :'https://opendata.grobogan.go.id/dataset/';
+}
+
+function datasetCard(d,key){
+  const org=d.organization?.title||d.author||'Instansi pemerintah';
+  const modified=d.metadata_modified
+    ?new Date(d.metadata_modified).toLocaleDateString('id-ID',{
+      day:'numeric',month:'short',year:'numeric'
+    })
+    :'';
+  const formats=[...new Set((d.resources||[]).map(r=>r.format).filter(Boolean))].slice(0,4);
+
+  return '<article class="dataset-card panel">'+
+    '<div class="dataset-top"><span>'+esc(catalogName(key))+'</span><small>'+esc(modified)+'</small></div>'+
+    '<h3>'+esc(d.title||d.name||'Dataset')+'</h3>'+
+    '<p>'+esc(cleanText(d.notes||'').slice(0,180)||'Dataset publik pemerintah daerah.')+'</p>'+
+    '<div class="format-row">'+formats.map(f=>'<span>'+esc(f)+'</span>').join('')+'</div>'+
+    '<div class="dataset-foot"><span>'+esc(org)+'</span>'+
+    '<a href="'+esc(catalogBase(key)+(d.name||''))+'" target="_blank" rel="noopener">Buka dataset ↗</a></div>'+
+  '</article>';
+}
+
+function renderCatalog(){
+  const key=state.catalogTab;
+  const c=state.catalogs[key];
+
+  $$('[data-catalog-tab]').forEach(b=>b.classList.toggle('active',b.dataset.catalogTab===key));
+
+  $('#catalogMeta').textContent=
+    fmt(c.count)+' dataset publik · '+catalogName(key)+' · snapshot terbaru';
+
+  $('#catalogGrid').innerHTML=c.items.length
+    ?c.items.map(d=>datasetCard(d,key)).join('')
+    :'<div class="empty-inline">Dataset belum tersedia pada snapshot ini.</div>';
+}
+
+function renderCatalogSummary(){
+  const b=state.catalogs.banten;
+  const g=state.catalogs.grobogan;
+
+  $('#bantenSummaryCount').textContent=fmt(b.count);
+  $('#groboganSummaryCount').textContent=fmt(g.count);
+
+  $('#bantenLatest').textContent=b.items[0]
+    ?'Terbaru: '+(b.items[0].title||b.items[0].name)
+    :'Belum ada snapshot dataset.';
+
+  $('#groboganLatest').textContent=g.items[0]
+    ?'Terbaru: '+(g.items[0].title||g.items[0].name)
+    :'Belum ada snapshot dataset.';
+}
+
+async function loadAdditionalData(){
+  const tasks=await Promise.allSettled([
+    json(LIVE.bigCount),
+    json(LIVE.bigSample),
+    json(LIVE.banten),
+    json(LIVE.grobogan)
+  ]);
+
+  if(tasks[0].status==='fulfilled'){
+    state.bigCount=Number(tasks[0].value?.count)||0;
+  }
+
+  if(tasks[1].status==='fulfilled'){
+    state.bigSamples=Array.isArray(tasks[1].value?.features)
+      ?tasks[1].value.features
+      :[];
+  }
+
+  if(tasks[2].status==='fulfilled'&&tasks[2].value?.success){
+    state.catalogs.banten={
+      count:Number(tasks[2].value?.result?.count)||0,
+      items:Array.isArray(tasks[2].value?.result?.results)
+        ?tasks[2].value.result.results
+        :[]
+    };
+  }
+
+  if(tasks[3].status==='fulfilled'&&tasks[3].value?.success){
+    state.catalogs.grobogan={
+      count:Number(tasks[3].value?.result?.count)||0,
+      items:Array.isArray(tasks[3].value?.result?.results)
+        ?tasks[3].value.result.results
+        :[]
+    };
+  }
+
+  renderBIG();
+  renderCatalogSummary();
+  renderCatalog();
 }
 
 function renderSources(){
   $('#activeSourceCount').textContent=state.sources.length||'—';
+
   $('#sourceGrid').innerHTML=state.sources.map(s=>
     '<article class="source-card panel">'+
-    '<div class="source-head"><span class="source-level">PUBLIC · NO AUTH</span>'+
-    '<span class="status-dot status-up"></span></div>'+
-    '<h3>'+esc(s.name)+'</h3><p>'+esc(s.description)+'</p>'+
-    '<div class="source-meta"><span>'+esc(s.agency)+'</span><span>'+esc(s.type)+'</span></div>'+
-    '<a href="'+esc(s.portalUrl)+'" target="_blank" rel="noopener">Dokumentasi resmi ↗</a>'+
+      '<div class="source-head">'+
+        '<span class="source-level">PUBLIC · NO AUTH</span>'+
+        '<span class="status-dot status-up"></span>'+
+      '</div>'+
+      '<h3>'+esc(s.name)+'</h3>'+
+      '<p>'+esc(s.description)+'</p>'+
+      '<div class="source-meta"><span>'+esc(s.agency)+'</span><span>'+esc(s.type)+'</span></div>'+
+      '<a href="'+esc(s.portalUrl)+'" target="_blank" rel="noopener">Sumber resmi ↗</a>'+
     '</article>'
   ).join('');
 }
@@ -255,13 +435,20 @@ async function loadRegistry(){
 async function reloadAll(){
   $('#weatherStatus').textContent='Memuat…';
   $('#quakeStatus').textContent='Memuat…';
-  await Promise.allSettled([loadStatus(),loadBMKG()]);
+
+  await Promise.allSettled([
+    loadStatus(),
+    loadBMKG(),
+    loadAdditionalData()
+  ]);
+
   toast('Data publik dimuat ulang');
 }
 
 function bind(){
   $$('[data-route]').forEach(b=>b.onclick=()=>nav(b.dataset.route));
   addEventListener('hashchange',route);
+
   $('#themeToggle').onclick=toggleTheme;
   $('#refreshAll').onclick=reloadAll;
 
@@ -270,12 +457,30 @@ function bind(){
     $$('[data-quake-tab]').forEach(x=>x.classList.toggle('active',x===b));
     renderQuakeList();
   });
+
+  $$('[data-catalog-tab]').forEach(b=>b.onclick=()=>{
+    state.catalogTab=b.dataset.catalogTab;
+    renderCatalog();
+  });
 }
 
 async function init(){
-  setTheme();bind();route();clock();setInterval(clock,30000);
-  await Promise.allSettled([loadRegistry(),loadStatus(),loadBMKG()]);
-  if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  setTheme();
+  bind();
+  route();
+  clock();
+  setInterval(clock,30000);
+
+  await Promise.allSettled([
+    loadRegistry(),
+    loadStatus(),
+    loadBMKG(),
+    loadAdditionalData()
+  ]);
+
+  if('serviceWorker'in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  }
 }
 
 init();
