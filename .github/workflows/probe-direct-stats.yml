@@ -12,35 +12,36 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect direct datastore records
+      - name: Inspect final KPI resources
         shell: bash
         run: |
           set -e
 
           ds () {
-            label="$1"; id="$2"
+            label="$1"; id="$2"; limit="${3:-100}"
             echo "===== $label ====="
-            curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -sS               "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=$id&limit=8" |
-              jq -c '{success,result:{total:.result.total,fields:(.result.fields|map(.id)),records:.result.records}}'
+            curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -sS               "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=$id&limit=$limit" |
+              jq -c '{total:.result.total,fields:(.result.fields|map(.id)),records:.result.records}'
           }
 
           find_ds () {
             label="$1"; query="$2"
             echo "===== DISCOVER $label :: $query ====="
-            curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -sS               "https://data.bantenprov.go.id/api/3/action/package_search?q=$query&rows=12" |
+            curl -fL --retry 2 --retry-all-errors --connect-timeout 10 --max-time 30               -A "NusaData-Probe/1.0" -sS               "https://data.bantenprov.go.id/api/3/action/package_search?q=$query&rows=20" |
               jq -c '.result.results[] | {
                 name,title,
                 ds:[.resources[]? | select(.datastore_active==true) | {id,name,format}]
-              } | select(.ds|length>0)' | head -n 20
+              } | select(.ds|length>0)' | head -n 30
           }
 
-          ds "UNEMPLOYMENT" "6e533cef-056d-4dbc-a689-8f388d6cb6c7"
-          ds "POVERTY" "cabba131-d45d-4920-b224-2f0ade451466"
-          ds "APBD" "41209471-f0f0-4af4-b29a-660dde6bbd80"
-          ds "SCHOOL" "ec8cc1b4-9f87-46fd-98cb-d2aab92fb52a"
-          ds "WASTE" "143df65f-35ee-4419-91b6-b289e368a488"
+          ds "UNEMPLOYMENT" "6e533cef-056d-4dbc-a689-8f388d6cb6c7" 50
+          ds "POVERTY" "cabba131-d45d-4920-b224-2f0ade451466" 250
+          ds "REVENUE 2024" "785712cd-82a9-44ed-a6fe-3d54ec3432c8" 100
+          ds "SMK" "ec8cc1b4-9f87-46fd-98cb-d2aab92fb52a" 20
+          ds "WASTE" "143df65f-35ee-4419-91b6-b289e368a488" 20
 
-          find_ds "HEALTH" "jumlah%20puskesmas"
-          find_ds "AGRICULTURE" "padi"
-          find_ds "APBD NUMERIC" "realisasi%20pendapatan"
-          find_ds "ENVIRONMENT" "volume%20sampah"
+          find_ds "INFLATION ALT" "indeks%20harga%20konsumen"
+          find_ds "HEALTH" "jumlah%20fasilitas%20kesehatan"
+          find_ds "HEALTH RS" "jumlah%20rumah%20sakit"
+          find_ds "AGRI" "produksi%20tanaman"
+          find_ds "AGRI RICE" "produksi%20padi%20sawah"
