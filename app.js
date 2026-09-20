@@ -1,368 +1,102 @@
-const state = {
-  registry: null,
-  sources: [],
-  query: '',
-  level: 'all',
-  auth: 'all',
-  category: 'Semua',
-  explorerSelected: new Set(),
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const state={registry:null,sources:[],weather:null,latestQuake:null,m5:[],felt:[],quakeTab:'m5'};
+const BMKG={
+ weather:(adm4)=>`https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=${encodeURIComponent(adm4)}`,
+ latest:'https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json',
+ m5:'https://data.bmkg.go.id/DataMKG/TEWS/gempaterkini.json',
+ felt:'https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json'
 };
-
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
-const fmt = new Intl.NumberFormat('id-ID');
-
-function esc(value = '') {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
+const DATASETS={
+ jakarta:'https://satudata.jakarta.go.id/api/3/action/package_search',
+ nasional:'https://data.go.id/api/3/action/package_search'
+};
+const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
+const num=v=>new Intl.NumberFormat('id-ID').format(Number(v)||0);
+function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2200)}
+function route(){const r=location.hash.slice(1)||'dashboard';$$('.view').forEach(v=>v.classList.toggle('active',v.dataset.view===r));$$('[data-route]').forEach(b=>b.classList.toggle('active',b.dataset.route===r));window.scrollTo({top:0})}
+function nav(r){location.hash=r}
+function setTheme(){const v=localStorage.getItem('nusadata-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.theme=v}
+function toggleTheme(){const v=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=v;localStorage.setItem('nusadata-theme',v)}
+async function json(url,timeout=12000){const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);try{const r=await fetch(url,{signal:c.signal,headers:{Accept:'application/json'}});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(t)}}
+function clock(){const d=new Date();$('#liveClock').textContent=d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})+' WIB'}
+function weatherRows(payload){const d=payload?.data?.[0]?.cuaca||[];return d.flat(Infinity).filter(x=>x&&typeof x==='object'&&('t'in x||'weather_desc'in x))}
+function weatherLoc(payload){return payload?.lokasi||payload?.data?.[0]?.lokasi||{}}
+function nextForecast(rows){const now=Date.now();return rows.find(x=>new Date((x.local_datetime||x.datetime||'').replace(' ','T')).getTime()>=now-30*60*1000)||rows[0]}
+function weatherIcon(desc=''){const x=desc.toLowerCase();if(x.includes('hujan'))return'🌧';if(x.includes('petir'))return'⛈';if(x.includes('berawan'))return'☁';if(x.includes('cerah'))return'☀';if(x.includes('kabut'))return'🌫';return'🌤'}
+function renderWeather(payload,full=false){
+ const rows=weatherRows(payload),loc=weatherLoc(payload),now=nextForecast(rows);
+ if(!now)throw new Error('Format data cuaca tidak dikenali');
+ if(!full){
+  $('#weatherNow').classList.remove('skeleton-block');
+  $('#weatherNow').innerHTML=`<div class="weather-icon">${weatherIcon(now.weather_desc)}</div><div><strong>${esc(now.t)}°</strong><span>${esc(now.weather_desc||'—')}</span><small>${esc(loc.desa||loc.kecamatan||'Kemayoran')}, ${esc(loc.kotkab||loc.provinsi||'DKI Jakarta')}</small></div><div class="weather-facts"><span>💧 ${esc(now.hu)}%</span><span>↝ ${esc(now.ws)} km/j</span></div>`;
+  $('#weatherMini').innerHTML=rows.slice(0,5).map(x=>`<div><span>${new Date((x.local_datetime||x.datetime).replace(' ','T')).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</span><b>${weatherIcon(x.weather_desc)} ${esc(x.t)}°</b></div>`).join('');
+  $('#weatherStatus').textContent='Live';
+ }else{
+  $('#weatherLocation').innerHTML=`<strong>${esc(loc.desa||'Lokasi')}</strong><span>${esc([loc.kecamatan,loc.kotkab,loc.provinsi].filter(Boolean).join(' · '))}</span>`;
+  $('#weatherDetail').innerHTML=rows.slice(0,24).map(x=>`<article class="forecast-item"><time>${new Date((x.local_datetime||x.datetime).replace(' ','T')).toLocaleString('id-ID',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</time><div class="forecast-icon">${weatherIcon(x.weather_desc)}</div><strong>${esc(x.t)}°C</strong><span>${esc(x.weather_desc||'—')}</span><small>Kelembapan ${esc(x.hu)}% · Angin ${esc(x.ws)} km/j</small></article>`).join('');
+ }
 }
-
-function statusLabel(v) {
-  return ({
-    up: 'Aktif', blocked: 'Terbatas', auth_required: 'Perlu autentikasi',
-    down: 'Tidak aktif', dns_dead: 'DNS mati', unknown: 'Belum dicek'
-  })[v] || v || 'Belum dicek';
+function quakeObj(p){return p?.Infogempa?.gempa}
+function quakeCoords(q){const c=String(q?.Coordinates||'').split(',').map(Number);return c.length===2&&c.every(Number.isFinite)?c:null}
+function quakeCard(q){return `<article class="quake-row"><div class="mag">M<strong>${esc(q.Magnitude)}</strong></div><div class="quake-copy"><strong>${esc(q.Wilayah)}</strong><span>${esc(q.Tanggal)} · ${esc(q.Jam)} · Kedalaman ${esc(q.Kedalaman)}</span><small>${esc(q.Potensi||q.Dirasakan||'')}</small></div></article>`}
+function renderLatestQuake(q){
+ $('#latestQuake').classList.remove('skeleton-block');
+ $('#latestQuake').innerHTML=`<div class="magnitude"><span>M</span><strong>${esc(q.Magnitude)}</strong></div><div class="quake-copy"><strong>${esc(q.Wilayah)}</strong><span>${esc(q.Tanggal)} · ${esc(q.Jam)}</span><small>Kedalaman ${esc(q.Kedalaman)} · ${esc(q.Potensi||'')}</small></div>`;
+ $('#quakeStatus').textContent='Live';
+ $('#quakeHero').innerHTML=`<div class="magnitude big"><span>M</span><strong>${esc(q.Magnitude)}</strong></div><div><span class="kicker">GEMPA TERBARU</span><h2>${esc(q.Wilayah)}</h2><p>${esc(q.Tanggal)} · ${esc(q.Jam)} · Kedalaman ${esc(q.Kedalaman)}</p><div class="tag-line"><span>${esc(q.Potensi||'')}</span>${q.Dirasakan?`<span>Dirasakan: ${esc(q.Dirasakan)}</span>`:''}</div></div>`;
 }
-
-function authLabel(v) {
-  return ({
-    none: 'Tanpa auth', 'api-key': 'API key', 'oauth2-client-credentials': 'OAuth 2.0',
-    restricted: 'Restricted', mixed: 'Campuran'
-  })[v] || v || '—';
+function renderQuakeList(){const a=state.quakeTab==='felt'?state.felt:state.m5;$('#quakeList').innerHTML=a.length?a.map(quakeCard).join(''):'<div class="empty-inline">Data belum tersedia.</div>'}
+async function loadBMKG(){
+ const adm4=$('#adm4Input')?.value.trim()||'31.71.03.1001';
+ const tasks=await Promise.allSettled([json(BMKG.weather(adm4)),json(BMKG.latest),json(BMKG.m5),json(BMKG.felt)]);
+ if(tasks[0].status==='fulfilled'){state.weather=tasks[0].value;renderWeather(state.weather);renderWeather(state.weather,true)}else{$('#weatherStatus').textContent='Tidak terbaca';$('#weatherNow').classList.remove('skeleton-block');$('#weatherNow').innerHTML='<div class="error-box">Data cuaca tidak dapat dimuat dari browser.</div>'}
+ if(tasks[1].status==='fulfilled'){state.latestQuake=quakeObj(tasks[1].value);renderLatestQuake(state.latestQuake)}else{$('#quakeStatus').textContent='Tidak terbaca';$('#latestQuake').innerHTML='<div class="error-box">Feed gempa gagal dimuat.</div>'}
+ if(tasks[2].status==='fulfilled')state.m5=quakeObj(tasks[2].value)||[];
+ if(tasks[3].status==='fulfilled')state.felt=quakeObj(tasks[3].value)||[];
+ $('#dashboardQuakes').innerHTML=(state.m5||[]).slice(0,6).map(quakeCard).join('')||'<div class="empty-inline">Data gempa belum tersedia.</div>';
+ renderQuakeList();
 }
-
-function browserLabel(v) {
-  return ({
-    direct: 'Direct', blocked: 'Diblok', 'key-required': 'Perlu key',
-    'may-block': 'CORS/WAF mungkin', 'server-only': 'Server-side'
-  })[v] || v || '—';
+function sourceName(k){return k==='jakarta'?'Satu Data Jakarta':'Satu Data Indonesia'}
+async function queryPortal(key,q='',rows=12,sort='metadata_modified desc'){
+ const base=DATASETS[key],u=new URL(base);if(q)u.searchParams.set('q',q);u.searchParams.set('rows',rows);u.searchParams.set('sort',sort);
+ const p=await json(u.toString(),10000);if(!p?.success||!p?.result)throw new Error('Format katalog tidak dikenali');
+ return {key,count:p.result.count||0,items:p.result.results||[]};
 }
-
-function levelLabel(v) { return v === 'daerah' ? 'Daerah' : 'Pusat'; }
-function statusClass(v) { return `status-${v || 'unknown'}`; }
-
-function toast(message) {
-  const el = $('#toast');
-  el.textContent = message;
-  el.classList.add('show');
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => el.classList.remove('show'), 2300);
+function datasetCard(d,source){
+ const org=d.organization?.title||d.maintainer||sourceName(source),date=d.metadata_modified?new Date(d.metadata_modified).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'';
+ const url=source==='jakarta'?`https://satudata.jakarta.go.id/open-data`:`https://data.go.id/dataset/${encodeURIComponent(d.name||'')}`;
+ return `<article class="dataset-card panel"><div class="dataset-top"><span>${esc(sourceName(source))}</span><small>${esc(date)}</small></div><h3>${esc(d.title||d.name||'Dataset')}</h3><p>${esc((d.notes||'').replace(/<[^>]*>/g,'').slice(0,180)||'Dataset publik pemerintah.')}</p><div class="dataset-foot"><span>${esc(org)}</span><a href="${esc(url)}" target="_blank" rel="noopener">Buka sumber ↗</a></div></article>`;
 }
-
-async function copyText(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    ta.remove();
-  }
-  toast('Disalin ke clipboard');
+async function loadDashboardDatasets(){
+ const box=$('#dashboardDatasets');
+ const calls=await Promise.allSettled([queryPortal('jakarta','',6),queryPortal('nasional','',6)]);
+ const good=calls.filter(x=>x.status==='fulfilled').map(x=>x.value);
+ if(!good.length){box.innerHTML='<div class="empty-inline">Portal dataset menolak akses langsung dari browser saat ini. Gunakan tab Dataset untuk mencoba pencarian.</div>';return}
+ const items=good.flatMap(g=>g.items.slice(0,3).map(d=>({d,source:g.key}))).slice(0,6);
+ box.innerHTML=items.map(x=>datasetCard(x.d,x.source)).join('');
 }
-
-function navigate(route) {
-  const valid = ['dashboard', 'catalog', 'explorer', 'status'];
-  if (!valid.includes(route)) route = 'dashboard';
-  if (location.hash !== `#${route}`) location.hash = route;
-  else applyRoute();
+async function searchDatasets(){
+ const q=$('#datasetQuery').value.trim(),sel=$('#datasetSource').value,keys=sel==='all'?['jakarta','nasional']:[sel],box=$('#datasetResults');
+ if(!q){toast('Masukkan kata kunci');return}
+ box.innerHTML='<div class="empty-state panel"><strong>Mencari data…</strong><span>Menghubungi portal pemerintah.</span></div>';
+ const calls=await Promise.allSettled(keys.map(k=>queryPortal(k,q,20,'score desc, metadata_modified desc')));
+ const good=calls.filter(x=>x.status==='fulfilled').map(x=>x.value),bad=calls.length-good.length,total=good.reduce((a,b)=>a+b.count,0);
+ $('#datasetMeta').textContent=`${num(total)} dataset ditemukan · ${good.length} sumber merespons${bad?' · '+bad+' sumber tidak terbaca':''}`;
+ const items=good.flatMap(g=>g.items.map(d=>({d,source:g.key})));
+ box.innerHTML=items.length?items.map(x=>datasetCard(x.d,x.source)).join(''):'<div class="empty-state panel"><strong>Tidak ada hasil yang dapat ditampilkan</strong><span>Portal mungkin tidak memberi akses CORS atau tidak menemukan kata kunci tersebut.</span></div>';
 }
-
-function applyRoute() {
-  const route = location.hash.replace('#', '') || 'dashboard';
-  const safeRoute = ['dashboard', 'catalog', 'explorer', 'status'].includes(route) ? route : 'dashboard';
-  $$('.view').forEach(v => v.classList.toggle('active', v.dataset.view === safeRoute));
-  $$('[data-route]').forEach(el => el.classList.toggle('active', el.dataset.route === safeRoute));
-  window.scrollTo({ top: 0, behavior: 'instant' });
+function renderSources(){
+ const publicSources=state.sources.filter(s=>['bmkg-weather','bmkg-earthquake','satudata-indonesia','jakarta-ckan','bps-webapi','bank-indonesia','satusehat-fhir'].includes(s.id));
+ $('#activeSourceCount').textContent=publicSources.length;
+ $('#sourceGrid').innerHTML=publicSources.map(s=>`<article class="source-card panel"><div class="source-head"><span class="source-level">${esc(s.level==='daerah'?'Daerah':'Pusat')}</span><span class="status-dot status-${esc(s.portalStatus||'unknown')}"></span></div><h3>${esc(s.name)}</h3><p>${esc(s.description)}</p><div class="source-meta"><span>${esc(s.agency)}</span><span>${esc(s.auth==='none'?'Publik':'Perlu autentikasi')}</span></div><a href="${esc(s.portalUrl)}" target="_blank" rel="noopener">Buka sumber resmi ↗</a></article>`).join('');
 }
-
-function initTheme() {
-  const saved = localStorage.getItem('nusaapi-theme');
-  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
-  document.documentElement.dataset.theme = saved || (dark ? 'dark' : 'light');
+async function loadRegistry(){try{state.registry=await json('./data/apis.json');state.sources=state.registry.sources||[];renderSources()}catch{state.sources=[];$('#activeSourceCount').textContent='—'}}
+function bind(){
+ $$('[data-route]').forEach(b=>b.onclick=()=>nav(b.dataset.route));addEventListener('hashchange',route);
+ $('#themeToggle').onclick=toggleTheme;$('#refreshAll').onclick=()=>{loadBMKG();loadDashboardDatasets();toast('Memuat ulang data')};
+ $('#loadWeather').onclick=()=>loadBMKG();$('#useKemayoran').onclick=()=>{$('#adm4Input').value='31.71.03.1001';loadBMKG()};
+ $$('[data-quake-tab]').forEach(b=>b.onclick=()=>{state.quakeTab=b.dataset.quakeTab;$$('[data-quake-tab]').forEach(x=>x.classList.toggle('active',x===b));renderQuakeList()});
+ $('#searchDatasets').onclick=searchDatasets;$('#datasetQuery').onkeydown=e=>{if(e.key==='Enter')searchDatasets()};
 }
-
-function toggleTheme() {
-  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = next;
-  localStorage.setItem('nusaapi-theme', next);
-}
-
-async function loadRegistry() {
-  const res = await fetch('./data/apis.json', { cache: 'no-store' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  state.registry = await res.json();
-  state.sources = state.registry.sources || [];
-  state.sources.filter(s => s.kind === 'ckan').slice(0, 4).forEach(s => state.explorerSelected.add(s.id));
-}
-
-function renderStats() {
-  const s = state.sources;
-  const stats = [
-    ['Sumber API', s.length, 'Registry awal terkurasi', '◎'],
-    ['Pemerintah pusat', s.filter(x => x.level === 'pusat').length, 'Kementerian & lembaga', '◆'],
-    ['Pemerintah daerah', s.filter(x => x.level === 'daerah').length, 'Provinsi & kota', '◇'],
-    ['Tanpa autentikasi', s.filter(x => x.auth === 'none').length, 'Lebih mudah diuji', '↗'],
-  ];
-  $('#statsGrid').innerHTML = stats.map(([label, value, sub, icon]) => `
-    <article class="stat-card panel">
-      <div class="stat-top"><span>${esc(label)}</span><span class="stat-icon">${icon}</span></div>
-      <div class="stat-value">${fmt.format(value)}</div><div class="stat-sub">${esc(sub)}</div>
-    </article>`).join('');
-}
-
-function renderFeatured() {
-  const ids = ['bmkg-weather', 'bps-webapi', 'satusehat-fhir', 'jakarta-ckan'];
-  const items = ids.map(id => state.sources.find(s => s.id === id)).filter(Boolean);
-  $('#featuredGrid').innerHTML = items.map(s => `
-    <button class="featured-card" data-open="${esc(s.id)}">
-      <div class="row"><span class="source-avatar">${esc((s.agency || s.name).slice(0,2).toUpperCase())}</span><i class="status-dot ${statusClass(s.portalStatus)}"></i></div>
-      <strong>${esc(s.name)}</strong><small>${esc(s.agency)}</small>
-    </button>`).join('');
-  bindOpenButtons($('#featuredGrid'));
-}
-
-function renderAccessBreakdown() {
-  const total = Math.max(1, state.sources.length);
-  const groups = [
-    ['Direct browser', state.sources.filter(s => s.browserAccess === 'direct').length],
-    ['Key / OAuth', state.sources.filter(s => ['api-key','oauth2-client-credentials'].includes(s.auth)).length],
-    ['CORS / WAF', state.sources.filter(s => ['blocked','may-block'].includes(s.browserAccess)).length],
-    ['Server-side', state.sources.filter(s => s.browserAccess === 'server-only').length],
-  ];
-  $('#accessBreakdown').innerHTML = groups.map(([name, count]) => `
-    <div class="access-line"><span>${esc(name)}</span><div class="bar"><i style="width:${Math.max(4, Math.round(count/total*100))}%"></i></div><strong>${count}</strong></div>`).join('');
-}
-
-function renderCategories() {
-  const categories = ['Semua', ...new Set(state.sources.map(s => s.category).filter(Boolean))];
-  $('#categoryChips').innerHTML = categories.map(c => `<button class="chip ${state.category === c ? 'active' : ''}" data-category="${esc(c)}">${esc(c)}</button>`).join('');
-  $$('#categoryChips [data-category]').forEach(btn => btn.addEventListener('click', () => {
-    state.category = btn.dataset.category;
-    renderCategories();
-    renderCatalog();
-  }));
-}
-
-function filteredSources() {
-  const q = state.query.trim().toLowerCase();
-  return state.sources.filter(s => {
-    const searchable = [s.name, s.agency, s.region, s.category, s.protocol, s.description, ...(s.tags || [])].join(' ').toLowerCase();
-    const authOk = state.auth === 'all' || (state.auth === 'none' ? s.auth === 'none' : s.auth !== 'none');
-    return (!q || searchable.includes(q))
-      && (state.level === 'all' || s.level === state.level)
-      && authOk
-      && (state.category === 'Semua' || s.category === state.category);
-  });
-}
-
-function apiCard(s) {
-  return `<article class="api-card" tabindex="0" role="button" data-open="${esc(s.id)}" aria-label="Detail ${esc(s.name)}">
-    <div class="api-card-top"><span class="source-level ${s.level === 'daerah' ? 'daerah' : ''}">${esc(levelLabel(s.level))}</span><span class="status-pill"><i class="status-dot ${statusClass(s.portalStatus)}"></i>${esc(statusLabel(s.portalStatus))}</span></div>
-    <h3>${esc(s.name)}</h3><div class="agency">${esc(s.agency)}</div>
-    <p>${esc(s.description)}</p>
-    <div class="tag-row">${(s.tags || []).slice(0,4).map(t => `<span class="mini-tag">${esc(t)}</span>`).join('')}</div>
-    <div class="api-card-footer"><span class="auth-label">◈ ${esc(authLabel(s.auth))}</span><span>${esc(s.protocol || s.kind)}</span></div>
-  </article>`;
-}
-
-function renderCatalog() {
-  const items = filteredSources();
-  $('#catalogCount').textContent = fmt.format(items.length);
-  $('#catalogGrid').innerHTML = items.map(apiCard).join('');
-  $('#emptyState').hidden = items.length !== 0;
-  bindOpenButtons($('#catalogGrid'));
-}
-
-function bindOpenButtons(root = document) {
-  $$('[data-open]', root).forEach(el => {
-    el.addEventListener('click', () => openSource(el.dataset.open));
-    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSource(el.dataset.open); } });
-  });
-}
-
-function openSource(id) {
-  const s = state.sources.find(x => x.id === id);
-  if (!s) return;
-  $('#dialogLevel').textContent = `${levelLabel(s.level)} · ${s.category}`;
-  $('#dialogLevel').className = `source-level ${s.level === 'daerah' ? 'daerah' : ''}`;
-  $('#dialogTitle').textContent = s.name;
-  $('#dialogAgency').textContent = s.agency;
-
-  const endpoints = (s.endpoints || []).map(ep => `
-    <div class="endpoint">
-      <div class="endpoint-top"><span class="method ${(ep.method || 'GET').toLowerCase()}">${esc(ep.method || 'GET')}</span><button class="copy-mini" data-copy="${esc(ep.url || '')}">Salin</button></div>
-      <code>${esc(ep.url || '')}</code>
-    </div>`).join('');
-
-  $('#dialogBody').innerHTML = `
-    <div class="detail-grid">
-      <div class="detail-metric"><span>Status</span><strong><i class="status-dot ${statusClass(s.portalStatus)}"></i> ${esc(statusLabel(s.portalStatus))}</strong></div>
-      <div class="detail-metric"><span>Autentikasi</span><strong>${esc(authLabel(s.auth))}</strong></div>
-      <div class="detail-metric"><span>Browser</span><strong>${esc(browserLabel(s.browserAccess))}</strong></div>
-    </div>
-    <section class="detail-section"><h3>Ringkasan</h3><p class="detail-description">${esc(s.description)}</p></section>
-    <section class="detail-section"><h3>Catatan akses</h3><p class="detail-description">${esc(s.statusNote || 'Belum ada catatan.')}</p></section>
-    ${s.baseUrl ? `<section class="detail-section"><h3>Base URL</h3><div class="endpoint"><div class="endpoint-top"><span class="method">BASE</span><button class="copy-mini" data-copy="${esc(s.baseUrl)}">Salin</button></div><code>${esc(s.baseUrl)}</code></div></section>` : ''}
-    ${endpoints ? `<section class="detail-section"><h3>Endpoint</h3><div class="endpoint-list">${endpoints}</div></section>` : ''}
-    ${s.testUrl ? `<section class="detail-section"><h3>Live test</h3><div class="detail-actions"><button class="button secondary" id="dialogTest">Jalankan request</button><button class="button ghost" data-copy="curl -L '${esc(s.testUrl)}'">Salin cURL</button></div><div id="testResult" class="test-result" hidden><div class="test-result-head"><span id="testStatus">Request</span><span id="testTime"></span></div><pre id="testPayload"></pre></div></section>` : ''}
-    <div class="detail-actions"><a class="button primary" href="${esc(s.portalUrl)}" target="_blank" rel="noopener">Buka portal ↗</a>${s.docsUrl ? `<a class="button secondary" href="${esc(s.docsUrl)}" target="_blank" rel="noopener">Dokumentasi</a>` : ''}</div>`;
-
-  $$('[data-copy]', $('#dialogBody')).forEach(btn => btn.addEventListener('click', () => copyText(btn.dataset.copy)));
-  $('#dialogTest')?.addEventListener('click', () => liveTest(s));
-  $('#apiDialog').showModal();
-}
-
-async function liveTest(s) {
-  const box = $('#testResult');
-  const payload = $('#testPayload');
-  const stat = $('#testStatus');
-  const time = $('#testTime');
-  if (!box || !payload) return;
-  box.hidden = false;
-  stat.textContent = 'Menghubungi…'; time.textContent = ''; payload.textContent = s.testUrl;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 12000);
-  const start = performance.now();
-  try {
-    const res = await fetch(s.testUrl, { signal: ctrl.signal, headers: { Accept: 'application/json, text/plain, */*' } });
-    const raw = await res.text();
-    let content = raw;
-    try { content = JSON.stringify(JSON.parse(raw), null, 2); } catch {}
-    stat.textContent = `HTTP ${res.status}`;
-    time.textContent = `${Math.round(performance.now() - start)} ms`;
-    payload.textContent = content.slice(0, 10000) || '(response kosong)';
-  } catch (err) {
-    stat.textContent = 'Tidak terbaca dari browser';
-    time.textContent = `${Math.round(performance.now() - start)} ms`;
-    payload.textContent = `${err.name === 'AbortError' ? 'Timeout > 12 detik' : err.message}\n\nKemungkinan penyebab: CORS, WAF, geo-blocking, atau endpoint sedang tidak tersedia. Kegagalan browser tidak otomatis berarti API mati.`;
-  } finally { clearTimeout(timer); }
-}
-
-function renderExplorerSources() {
-  const candidates = state.sources.filter(s => s.kind === 'ckan');
-  $('#explorerSources').innerHTML = candidates.map(s => `
-    <label class="source-check"><input type="checkbox" value="${esc(s.id)}" ${state.explorerSelected.has(s.id) ? 'checked' : ''}><span><strong>${esc(s.name)}</strong><small>${esc(s.region || s.agency)}</small></span></label>`).join('');
-  $$('#explorerSources input').forEach(input => input.addEventListener('change', () => {
-    if (input.checked) {
-      if (state.explorerSelected.size >= 6) { input.checked = false; toast('Maksimal 6 sumber'); return; }
-      state.explorerSelected.add(input.value);
-    } else state.explorerSelected.delete(input.value);
-  }));
-}
-
-async function runExplorer() {
-  const q = $('#explorerQuery').value.trim();
-  if (!q) return toast('Masukkan kata kunci');
-  const sources = [...state.explorerSelected].map(id => state.sources.find(s => s.id === id)).filter(Boolean).slice(0, 6);
-  if (!sources.length) return toast('Pilih minimal satu sumber');
-
-  const output = $('#explorerOutput');
-  output.classList.remove('initial');
-  output.innerHTML = `<div class="loading"><i class="spinner"></i>Mencari “${esc(q)}” di ${sources.length} portal…</div>`;
-  $('#explorerMeta').textContent = `${sources.length} sumber`;
-
-  const responses = await Promise.allSettled(sources.map(async s => {
-    const endpoint = `${String(s.baseUrl).replace(/\/$/, '')}/package_search?q=${encodeURIComponent(q)}&rows=6`;
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10000);
-    try {
-      const res = await fetch(endpoint, { signal: ctrl.signal, headers: { Accept: 'application/json' } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      return { s, results: data?.result?.results || [] };
-    } finally { clearTimeout(timer); }
-  }));
-
-  let total = 0;
-  output.innerHTML = responses.map((r, index) => {
-    const s = sources[index];
-    if (r.status === 'rejected') return `<article class="portal-result"><div class="portal-result-head"><strong>${esc(s.name)}</strong><span>Tidak terbaca</span></div><div class="portal-error">${esc(r.reason?.message || 'CORS/WAF/timeout')} · <a href="${esc(s.portalUrl)}" target="_blank" rel="noopener">buka portal ↗</a></div></article>`;
-    const results = r.value.results;
-    total += results.length;
-    return `<article class="portal-result"><div class="portal-result-head"><strong>${esc(s.name)}</strong><span>${results.length} hasil</span></div>${results.length ? results.map(ds => {
-      const res = (ds.resources || []).find(x => x.url);
-      return `<div class="dataset-item"><a href="${esc(res?.url || s.portalUrl)}" target="_blank" rel="noopener">${esc(ds.title || ds.name || 'Dataset')} ↗</a><p>${esc(ds.organization?.title || ds.notes || 'Tidak ada deskripsi')}</p></div>`;
-    }).join('') : `<div class="dataset-item"><p>Tidak ada hasil.</p></div>`}</article>`;
-  }).join('');
-  $('#explorerMeta').textContent = `${total} hasil · ${sources.length} sumber`;
-}
-
-function renderStatus() {
-  const rows = [...state.sources].sort((a,b) => a.name.localeCompare(b.name));
-  const groups = [
-    ['Aktif', rows.filter(x => x.portalStatus === 'up').length, 'up'],
-    ['Terbatas', rows.filter(x => ['blocked','auth_required'].includes(x.portalStatus)).length, 'blocked'],
-    ['Bermasalah', rows.filter(x => ['down','dns_dead'].includes(x.portalStatus)).length, 'down'],
-    ['Belum dicek', rows.filter(x => x.portalStatus === 'unknown').length, 'unknown'],
-  ];
-  $('#statusSummary').innerHTML = groups.map(([name,count,status]) => `
-    <article class="stat-card panel"><div class="stat-top"><span>${esc(name)}</span><i class="status-dot ${statusClass(status)}"></i></div><div class="stat-value">${count}</div><div class="stat-sub">snapshot registry</div></article>`).join('');
-
-  $('#statusTableBody').innerHTML = rows.map(s => `
-    <tr tabindex="0" data-open="${esc(s.id)}">
-      <td><strong>${esc(s.name)}</strong></td>
-      <td>${esc(s.agency)}</td>
-      <td>${esc(levelLabel(s.level))}</td>
-      <td>${esc(authLabel(s.auth))}</td>
-      <td><span class="status-chip"><i class="status-dot ${statusClass(s.portalStatus)}"></i>${esc(statusLabel(s.portalStatus))}</span></td>
-      <td>${esc(browserLabel(s.browserAccess))}</td>
-    </tr>`).join('');
-  bindOpenButtons($('#statusTableBody'));
-}
-
-function resetFilters() {
-  state.query = ''; state.level = 'all'; state.auth = 'all'; state.category = 'Semua';
-  $('#catalogSearch').value = '';
-  $('#levelFilter').value = 'all';
-  $('#authFilter').value = 'all';
-  renderCategories(); renderCatalog();
-}
-
-function bindEvents() {
-  $$('[data-route]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); navigate(el.dataset.route); }));
-  window.addEventListener('hashchange', applyRoute);
-  $('#themeToggle').addEventListener('click', toggleTheme);
-  $('#catalogSearch').addEventListener('input', e => { state.query = e.target.value; renderCatalog(); });
-  $('#levelFilter').addEventListener('change', e => { state.level = e.target.value; renderCatalog(); });
-  $('#authFilter').addEventListener('change', e => { state.auth = e.target.value; renderCatalog(); });
-  $('#resetFilters').addEventListener('click', resetFilters);
-  $('#runExplorer').addEventListener('click', runExplorer);
-  $('#explorerQuery').addEventListener('keydown', e => { if (e.key === 'Enter') runExplorer(); });
-  $('#dialogClose').addEventListener('click', () => $('#apiDialog').close());
-  $('#apiDialog').addEventListener('click', e => { if (e.target === $('#apiDialog')) $('#apiDialog').close(); });
-  document.addEventListener('keydown', e => {
-    if (e.key === '/' && !['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)) {
-      e.preventDefault(); navigate('catalog'); setTimeout(() => $('#catalogSearch').focus(), 60);
-    }
-    if (e.key === 'Escape' && $('#apiDialog').open) $('#apiDialog').close();
-  });
-}
-
-function registerSW() {
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('./sw.js').catch(() => {});
-}
-
-async function init() {
-  initTheme();
-  bindEvents();
-  applyRoute();
-  try {
-    await loadRegistry();
-    renderStats(); renderFeatured(); renderAccessBreakdown(); renderCategories(); renderCatalog(); renderExplorerSources(); renderStatus();
-  } catch (err) {
-    console.error(err);
-    $('#catalogGrid').innerHTML = `<div class="empty-state panel"><h3>Registry gagal dimuat</h3><p>${esc(err.message)}</p></div>`;
-  }
-  registerSW();
-}
-
+async function init(){setTheme();bind();route();clock();setInterval(clock,30000);await loadRegistry();loadBMKG();loadDashboardDatasets();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{})}
 init();
