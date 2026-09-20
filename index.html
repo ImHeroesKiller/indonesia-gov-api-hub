@@ -137,6 +137,19 @@
         </article>
       </section>
 
+      <section class="panel dashboard-panel direct-stat-panel">
+        <div class="section-head">
+          <div><span class="kicker">DIRECT STATISTICS</span><h2>Angka publik langsung</h2></div>
+          <span class="status-chip">NORMALIZED</span>
+        </div>
+        <p class="panel-description">KPI ditarik langsung dari public datastore/REST resmi dan dinormalisasi bersama periode serta satuannya.</p>
+        <div id="dashboardDirectStats" class="direct-stat-grid"></div>
+        <div class="direct-stat-foot">
+          <div id="dashboardIHK" class="direct-mini-list"></div>
+          <div id="dashboardFoodPrices" class="direct-mini-list"></div>
+        </div>
+      </section>
+
       <section class="panel dashboard-panel domain-intelligence-panel">
         <div class="section-head">
           <div><span class="kicker">DOMAIN INTELLIGENCE</span><h2>Cakupan data lintas sektor</h2></div>
@@ -264,6 +277,37 @@
         </div>
         <div id="catalogMeta" class="result-meta"></div>
         <div id="catalogGrid" class="dataset-grid"></div>
+      </section>
+
+      <section class="panel section-panel">
+        <div class="section-head">
+          <div><span class="kicker">DIRECT PUBLIC STATISTICS</span><h2>Statistik Terverifikasi</h2></div>
+          <span class="status-chip">RAW → NORMALIZED</span>
+        </div>
+        <p class="panel-description">Angka berikut berasal dari CKAN DataStore/REST publik resmi dan bukan hasil estimasi NusaData.</p>
+        <div id="directStatsDetail" class="direct-stat-grid detailed"></div>
+
+        <div class="dashboard-two-column direct-detail-columns">
+          <div class="enterprise-block">
+            <div class="section-head compact">
+              <div><span class="kicker">IHK KOTA PANTAUAN BANTEN</span><h3>Perubahan 2023 → 2024</h3></div>
+            </div>
+            <div id="directIHKTable" class="stat-table"></div>
+          </div>
+          <div class="enterprise-block">
+            <div class="section-head compact">
+              <div><span class="kicker">FOOD STATION</span><h3>Harga pangan publik</h3></div>
+            </div>
+            <div id="directFoodPriceGrid" class="price-stat-grid"></div>
+          </div>
+        </div>
+
+        <div class="enterprise-block">
+          <div class="section-head compact">
+            <div><span class="kicker">PERKEBUNAN BANTEN 2024</span><h3>Produksi menurut komoditas</h3></div>
+          </div>
+          <div id="directAgriculture" class="agri-stat-list"></div>
+        </div>
       </section>
 
       <section class="panel section-panel">
