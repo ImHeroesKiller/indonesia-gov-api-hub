@@ -74,63 +74,17 @@ jobs:
             return 1
           }
 
-          # Kementerian Perindustrian — documented public CKAN REST.
-          # Optional at deploy time because the host is currently not consistently reachable
-          # from cloud/GitHub runners. Never fail production because of this source.
-          KEMENPERIN_OK=true
-          curl_json_optional "https://satudata.kemenperin.go.id/id/api/3/action/package_search?q=nikel&rows=10&sort=metadata_modified%20desc" "tmp-invest/kemenperin-nickel.json" || KEMENPERIN_OK=false
-          curl_json_optional "https://satudata.kemenperin.go.id/id/api/3/action/package_search?q=kawasan%20industri&rows=10&sort=metadata_modified%20desc" "tmp-invest/kemenperin-estate.json" || KEMENPERIN_OK=false
-          curl_json_optional "https://satudata.kemenperin.go.id/id/api/3/action/package_search?q=kapasitas%20produksi&rows=10&sort=metadata_modified%20desc" "tmp-invest/kemenperin-capacity.json" || KEMENPERIN_OK=false
-          curl_json_optional "https://satudata.kemenperin.go.id/id/api/3/action/package_search?q=kendaraan%20listrik&rows=10&sort=metadata_modified%20desc" "tmp-invest/kemenperin-ev.json" || KEMENPERIN_OK=false
-          curl_json_optional "https://satudata.kemenperin.go.id/id/api/3/action/package_search?q=industri%20hijau&rows=10&sort=metadata_modified%20desc" "tmp-invest/kemenperin-green.json" || KEMENPERIN_OK=false
-
-          if [ "$KEMENPERIN_OK" = true ]; then
-            for f in tmp-invest/kemenperin-*.json; do
-              jq -e '.success==true and (.result.results|type=="array")' "$f" >/dev/null || KEMENPERIN_OK=false
-            done
-          fi
-
-          if [ "$KEMENPERIN_OK" = true ]; then
-            jq -n \
-              --slurpfile nickel tmp-invest/kemenperin-nickel.json \
-              --slurpfile estate tmp-invest/kemenperin-estate.json \
-              --slurpfile capacity tmp-invest/kemenperin-capacity.json \
-              --slurpfile ev tmp-invest/kemenperin-ev.json \
-              --slurpfile green tmp-invest/kemenperin-green.json \
-              '{
-                available:true,
-                generated_at:(now|todateiso8601),
-                themes:{
-                  nickel:{count:($nickel[0].result.count//0)},
-                  industrial_estate:{count:($estate[0].result.count//0)},
-                  capacity:{count:($capacity[0].result.count//0)},
-                  ev:{count:($ev[0].result.count//0)},
-                  green_industry:{count:($green[0].result.count//0)}
-                },
-                items:(
-                  (
-                    [$nickel[0].result.results[]? | {theme:"nickel",name,title,url:("https://satudata.kemenperin.go.id/dataset/"+.name),metadata_modified}] +
-                    [$estate[0].result.results[]? | {theme:"industrial_estate",name,title,url:("https://satudata.kemenperin.go.id/dataset/"+.name),metadata_modified}] +
-                    [$capacity[0].result.results[]? | {theme:"capacity",name,title,url:("https://satudata.kemenperin.go.id/dataset/"+.name),metadata_modified}] +
-                    [$ev[0].result.results[]? | {theme:"ev",name,title,url:("https://satudata.kemenperin.go.id/dataset/"+.name),metadata_modified}] +
-                    [$green[0].result.results[]? | {theme:"green_industry",name,title,url:("https://satudata.kemenperin.go.id/dataset/"+.name),metadata_modified}]
-                  )
-                  | unique_by(.name)
-                  | sort_by(.metadata_modified//"")
-                  | reverse
-                  | .[:20]
-                )
-              }' > live/investment-industry.json
-          else
-            cat > live/investment-industry.json <<'EOF'
+          # Kementerian Perindustrian
+          # Official CKAN REST is documented, but the host is currently not reliably
+          # reachable from deployment runners. Keep the gap explicit and non-blocking.
+          cat > live/investment-industry.json <<'EOF'
           {
             "available": false,
-            "reason": "Official Kemenperin CKAN REST is temporarily unreachable from the deployment runner.",
+            "reason": "Official Kemenperin CKAN REST is documented but currently unreachable from the deployment runner.",
             "themes": {},
             "items": []
           }
           EOF
-          fi
 
           # Kementerian ESDM — official ArcGIS REST
           curl_json "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json" "tmp-invest/esdm-well-count.json"
