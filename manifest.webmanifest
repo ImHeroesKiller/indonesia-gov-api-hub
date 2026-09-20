@@ -1,7 +1,7 @@
 {
-  "name": "NusaData — Portal Data Publik Indonesia",
+  "name": "NusaData — Investment Intelligence Indonesia",
   "short_name": "NusaData",
-  "description": "Portal data publik Indonesia dari REST API pemerintah, BUMN, dan BUMD tanpa autentikasi.",
+  "description": "Dashboard investment intelligence berbasis data fiskal, moneter, perdagangan, industri, energi, pajak dan kapasitas daerah dari sumber resmi.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
