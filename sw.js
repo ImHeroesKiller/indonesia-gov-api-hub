@@ -1,4 +1,4 @@
-const CACHE='nusadata-v9-direct-statistics';
+const CACHE='nusadata-v10-provincial-comparison';
 
 const CORE=[
   './',
