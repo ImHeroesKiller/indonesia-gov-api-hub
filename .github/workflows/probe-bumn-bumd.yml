@@ -12,26 +12,57 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect PELNI and TransJakarta public data calls
+      - name: Verify PELNI public endpoints and inspect MRT relative API
         shell: bash
         run: |
           set +e
           work=$(mktemp -d)
 
-          echo "===== PELNI ====="
-          curl -L --connect-timeout 8 --max-time 25 -A "Mozilla/5.0" -sS https://pelni.co.id/reservasi-tiket -o "$work/pelni.html"
-          echo "-- URL/API refs --"
-          grep -Eo 'https?://[^"'\'' <>()]+' "$work/pelni.html" | grep -Ei '(api|json|ajax|schedule|jadwal|port|pelabuhan)' | sort -u | head -n 80 || true
-          echo "-- AJAX/fetch contexts --"
-          grep -Eo '.{0,220}(\$\.ajax|ajax\(|fetch\(|axios|url:).{0,320}' "$work/pelni.html" | head -n 120 || true
-          echo "-- JS refs --"
-          grep -Eo '<script[^>]+src=["'\''][^"'\'']+' "$work/pelni.html" | sed -E 's/.*src=["'\'']//' | head -n 30 || true
+          req () {
+            name="$1"
+            method="$2"
+            url="$3"
+            data="$4"
+            echo "===== $name ====="
+            tmp=$(mktemp)
+            if [ "$method" = "POST" ]; then
+              code=$(curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0 NusaData-Probe"                 -H "Accept: application/json,text/plain,*/*"                 -H "X-Requested-With: XMLHttpRequest"                 -X POST --data "$data"                 -sS -w "%{http_code}" -o "$tmp" "$url")
+            else
+              code=$(curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0 NusaData-Probe"                 -H "Accept: application/json,text/plain,*/*"                 -sS -w "%{http_code}" -o "$tmp" "$url")
+            fi
+            echo "HTTP=$code"
+            echo "MIME=$(file -b --mime-type "$tmp" 2>/dev/null)"
+            if jq -e . "$tmp" >/dev/null 2>&1; then
+              echo "JSON=valid"
+              jq -c 'if type=="object" then keys else type end' "$tmp" | head -c 600
+              echo
+              jq -c '.' "$tmp" | head -c 2000
+              echo
+            else
+              echo "JSON=invalid"
+              head -c 1200 "$tmp"
+              echo
+            fi
+            rm -f "$tmp"
+          }
 
-          echo "===== TRANSJAKARTA ====="
-          curl -L --connect-timeout 8 --max-time 25 -A "Mozilla/5.0" -sS https://www.transjakarta.co.id/rute -o "$work/tj.html"
-          echo "-- AJAX blocks --"
-          grep -n -A10 -B3 '\$\.ajax' "$work/tj.html" | head -n 220 || true
-          echo "-- URL lines near AJAX --"
-          grep -nE 'url[[:space:]]*:' "$work/tj.html" | head -n 80 || true
-          echo "-- relative endpoint strings --"
-          grep -Eo '["'\'']/[A-Za-z0-9_./?=&-]+["'\'']' "$work/tj.html" | grep -Ei '(api|rute|route|koridor|halte|ajax)' | sort -u | head -n 100 || true
+          req "PELNI getorg GET" GET "https://pelni.co.id/getorg" ""
+          req "PELNI getorg POST" POST "https://pelni.co.id/getorg" ""
+          req "PELNI getdes POST empty" POST "https://pelni.co.id/getdes" ""
+          req "PELNI getclass POST empty" POST "https://pelni.co.id/getclass" ""
+
+          echo "===== PELNI FORM OPTION SAMPLE ====="
+          curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0" -sS https://pelni.co.id/reservasi-tiket -o "$work/pelni.html"
+          grep -n -A12 -B4 'getorg' "$work/pelni.html" | head -n 100 || true
+          grep -Eo '<option[^>]+value="[^"]+"[^>]*>[^<]+' "$work/pelni.html" | head -n 50 || true
+
+          echo "===== MRT relative API strings ====="
+          curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0" -sS https://jakartamrt.co.id/ -o "$work/mrt.html"
+          mrtjs=$(grep -Eo '/assets/index-[^"'\'' ]+\.js' "$work/mrt.html" | head -n1)
+          if [ -n "$mrtjs" ]; then
+            curl -L --connect-timeout 8 --max-time 20 -A "Mozilla/5.0" -sS "https://jakartamrt.co.id$mrtjs" -o "$work/mrt.js"
+            echo "-- relative /api strings --"
+            grep -Eo '["'\''][^"'\'']*(/api/|api/)[^"'\'']*["'\'']' "$work/mrt.js" | sort -u | head -n 80 || true
+            echo "-- baseURL contexts --"
+            grep -Eo '.{0,120}(baseURL|axios\.create|VITE_|API_URL|apiUrl).{0,220}' "$work/mrt.js" | head -n 80 || true
+          fi
