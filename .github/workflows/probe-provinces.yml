@@ -12,7 +12,7 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe verified provincial candidates
+      - name: Probe provincial CKAN candidates
         shell: bash
         run: |
           set +e
@@ -26,11 +26,13 @@ jobs:
               jq -c '{count:.result.count,first:(.result.results[0].title//null)}' "$tmp"
             else
               echo "HTTP=$code VALID=false"
-              head -c 250 "$tmp" | tr '\n' ' '; echo
+              head -c 180 "$tmp" | tr '\n' ' '; echo
             fi
             rm -f "$tmp"
           }
           probe "Aceh" "https://data.acehprov.go.id/id/api/3/action/package_search?rows=1"
           probe "Sumatera Barat" "https://data.sumbarprov.go.id/api/3/action/package_search?rows=1"
           probe "Sumatera Selatan" "https://opendata.sumselprov.go.id/api/3/action/package_search?rows=1"
-          probe "Kalimantan Barat" "https://data.kalbarprov.go.id/api/3/action/package_search?rows=1"
+          probe "Jawa Tengah" "https://data.jatengprov.go.id/api/3/action/package_search?rows=1"
+          probe "Jawa Timur" "https://opendata.jatimprov.go.id/api/3/action/package_search?rows=1"
+          probe "Bali" "https://data.bali.go.id/api/3/action/package_search?rows=1"
