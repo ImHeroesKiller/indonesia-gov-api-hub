@@ -12,28 +12,19 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe ESDM substantive public layers
+      - name: Final domain count validation
         shell: bash
         run: |
-          set +e
-          inspect () {
+          set -e
+          check_count () {
             name="$1"; url="$2"
             echo "===== $name ====="
-            tmp=$(mktemp)
-            code=$(curl -L --connect-timeout 10 --max-time 30 -A "NusaData-Probe/1.0" -sS -w "%{http_code}" -o "$tmp" "$url")
-            echo "HTTP=$code BYTES=$(wc -c < "$tmp")"
-            if jq -e . "$tmp" >/dev/null 2>&1; then
-              echo "JSON=valid"
-              jq -c 'if type=="object" then {error:.error,layers:(.layers//[]|map({id,name})),count:.count,features_count:(.features//[]|length)} else . end' "$tmp" | head -c 5000
-              echo
-            else
-              echo "JSON=invalid"
-            fi
-            rm -f "$tmp"
+            v=$(curl -fL --retry 1 --connect-timeout 10 --max-time 30 -A "NusaData-Probe/1.0" -sS "$url")
+            echo "$v" | jq -e '.count >= 0'
+            echo "$v" | jq -c .
           }
-
-          inspect "ESDM wells MapServer" "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/MapServer?f=pjson"
-          inspect "ESDM wells FeatureServer" "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/FeatureServer?f=pjson"
-          inspect "ESDM WK 2026 MapServer" "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/MapServer?f=pjson"
-          inspect "ESDM WK 2026 FeatureServer" "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/FeatureServer?f=pjson"
-          inspect "Jakarta Transport Coverage count" "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Public_Transport_Coverage_2025/FeatureServer/2/query?where=1%3D1&returnCountOnly=true&f=json"
+          check_count "ESDM wells" "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/well/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json"
+          check_count "ESDM WK 2026" "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2/WK_2026_TAHAP_1/MapServer/0/query?where=1%3D1&returnCountOnly=true&f=json"
+          check_count "Jakarta transport" "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Titik_Transportasi_Umum_Jakarta_v3/FeatureServer/26/query?where=1%3D1&returnCountOnly=true&f=json"
+          check_count "Jakarta roads" "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Peta_Jalan_DKI/FeatureServer/1/query?where=1%3D1&returnCountOnly=true&f=json"
+          check_count "Jakarta RDTR" "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/rdtr_2022_new/FeatureServer/0/query?where=1%3D1&returnCountOnly=true&f=json"
