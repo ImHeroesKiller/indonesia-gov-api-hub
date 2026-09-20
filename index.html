@@ -23,6 +23,7 @@
       <button class="nav-item active" data-route="dashboard">Dashboard</button>
       <button class="nav-item" data-route="weather">Cuaca</button>
       <button class="nav-item" data-route="earthquake">Gempa</button>
+      <button class="nav-item" data-route="data">Data Publik</button>
       <button class="nav-item" data-route="sources">Sumber</button>
     </nav>
 
@@ -40,16 +41,16 @@
         <div>
           <span class="eyebrow"><i></i> VERIFIED PUBLIC REST DATA</span>
           <h1>Data publik pemerintah, <span>tanpa key & login.</span></h1>
-          <p>Hanya data dari endpoint REST/JSON publik yang dapat diakses tanpa API key, OAuth, login, atau kredensial. Sumber yang gagal validasi otomatis tidak akan dipublikasikan.</p>
+          <p>Data diambil hanya dari REST/JSON API pemerintah yang dapat diakses publik tanpa API key, OAuth, login, cookie, atau kredensial. Endpoint yang gagal validasi otomatis tidak ikut dipublikasikan.</p>
           <div class="hero-actions">
             <button class="button primary" data-route="weather">Lihat Cuaca</button>
-            <button class="button secondary" data-route="earthquake">Gempa Terkini</button>
+            <button class="button secondary" data-route="data">Buka Data Publik</button>
           </div>
         </div>
         <div class="source-badge">
           <span>SUMBER REST AKTIF</span>
           <strong id="activeSourceCount">—</strong>
-          <small>endpoint family tervalidasi</small>
+          <small>sumber tervalidasi</small>
         </div>
       </div>
 
@@ -73,6 +74,30 @@
           <div class="source-note">Sumber: BMKG Open Earthquake JSON · tanpa autentikasi</div>
         </article>
       </div>
+
+      <section class="public-summary-grid">
+        <article class="panel summary-card">
+          <span class="kicker">BIG · GEOSPASIAL</span>
+          <strong id="bigSummaryCount">—</strong>
+          <h3>Batas desa/kelurahan</h3>
+          <p>Jumlah fitur wilayah administrasi yang dapat dibaca melalui ArcGIS REST publik BIG.</p>
+          <button class="text-button" data-route="data">Lihat data →</button>
+        </article>
+        <article class="panel summary-card">
+          <span class="kicker">SATU DATA BANTEN</span>
+          <strong id="bantenSummaryCount">—</strong>
+          <h3>Dataset publik</h3>
+          <p id="bantenLatest">Memuat dataset terbaru…</p>
+          <button class="text-button" data-route="data">Lihat dataset →</button>
+        </article>
+        <article class="panel summary-card">
+          <span class="kicker">OPEN DATA GROBOGAN</span>
+          <strong id="groboganSummaryCount">—</strong>
+          <h3>Dataset publik</h3>
+          <p id="groboganLatest">Memuat dataset terbaru…</p>
+          <button class="text-button" data-route="data">Lihat dataset →</button>
+        </article>
+      </section>
 
       <section class="panel section-panel">
         <div class="section-head">
@@ -119,6 +144,40 @@
       </section>
     </section>
 
+    <section class="view" data-view="data">
+      <div class="page-heading">
+        <div>
+          <span class="eyebrow"><i></i> VERIFIED OPEN GOVERNMENT DATA</span>
+          <h1>Data Publik</h1>
+          <p>Data yang ditampilkan berasal dari REST API pemerintah yang sudah lolos tes no-auth dan JSON validation.</p>
+        </div>
+      </div>
+
+      <section class="panel section-panel">
+        <div class="section-head">
+          <div><span class="kicker">BADAN INFORMASI GEOSPASIAL</span><h2>Wilayah Administrasi</h2></div>
+          <span class="status-chip">ArcGIS REST · Public</span>
+        </div>
+        <div class="geo-stat">
+          <div><span>Total fitur desa/kelurahan</span><strong id="bigCount">—</strong><small>hasil query REST langsung BIG</small></div>
+          <div><span>Contoh data</span><strong id="bigSampleCount">—</strong><small>nama wilayah & kode PUM</small></div>
+        </div>
+        <div id="bigSamples" class="region-list"></div>
+      </section>
+
+      <section class="panel section-panel">
+        <div class="section-head">
+          <div><span class="kicker">CKAN PUBLIC REST</span><h2>Dataset Pemerintah Daerah</h2></div>
+        </div>
+        <div class="tab-row">
+          <button class="chip active" data-catalog-tab="banten">Banten</button>
+          <button class="chip" data-catalog-tab="grobogan">Grobogan</button>
+        </div>
+        <div id="catalogMeta" class="result-meta"></div>
+        <div id="catalogGrid" class="dataset-grid"></div>
+      </section>
+    </section>
+
     <section class="view" data-view="sources">
       <div class="page-heading">
         <div>
@@ -132,10 +191,11 @@
   </main>
 
   <nav class="mobile-nav" aria-label="Navigasi mobile">
-    <button class="active" data-route="dashboard"><span>⌂</span><small>Dashboard</small></button>
+    <button class="active" data-route="dashboard"><span>⌂</span><small>Home</small></button>
     <button data-route="weather"><span>☁</span><small>Cuaca</small></button>
     <button data-route="earthquake"><span>◉</span><small>Gempa</small></button>
-    <button data-route="sources"><span>▦</span><small>Sumber</small></button>
+    <button data-route="data"><span>▦</span><small>Data</small></button>
+    <button data-route="sources"><span>◎</span><small>Sumber</small></button>
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
