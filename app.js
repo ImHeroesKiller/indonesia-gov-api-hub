@@ -88,7 +88,8 @@ function statusLabel(status){
     unreachable:'TEMP UNREACHABLE',
     auth_required:'AUTH REQUIRED',
     access_request:'ACCESS REQUEST',
-    non_rest_public_service:'NON-REST PUBLIC'
+    non_rest_public_service:'NON-REST PUBLIC',
+    non_rest_public_data:'PUBLIC DATA · NON-REST'
   })[status]||String(status||'UNKNOWN').toUpperCase();
 }
 function sourceCard(source){
