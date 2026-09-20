@@ -12,29 +12,28 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe next provincial CKAN candidates
+      - name: Probe Jawa Barat public API
         shell: bash
         run: |
           set +e
-          probe () {
-            province="$1"; url="$2"
+          for url in \
+            "https://opendata.jabarprov.go.id/api/3/action/package_search?rows=1" \
+            "https://opendata.jabarprov.go.id/api/3/action/package_search?q=investasi&rows=1"
+          do
+            echo "===== $url ====="
             tmp=$(mktemp)
-            code=$(curl -L --connect-timeout 5 --max-time 12 -A "NusaData-Probe/1.0" -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "$url")
-            ok=false
-            if jq -e '.success==true and (.result.results|type=="array")' "$tmp" >/dev/null 2>&1; then ok=true; fi
-            echo "$province HTTP=$code VALID=$ok"
-            if [ "$ok" = true ]; then jq -c '{count:.result.count,first:(.result.results[0].title//null)}' "$tmp"; fi
+            code=$(curl -L --connect-timeout 8 --max-time 25 -A "NusaData-Probe/1.0" -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "$url")
+            echo "HTTP=$code"
+            if jq -e '.success==true and (.result.results|type=="array")' "$tmp" >/dev/null 2>&1; then
+              echo "CKAN_VALID=true"
+              jq -c '{count:.result.count,first:(.result.results[0].title//null)}' "$tmp"
+            elif jq -e . "$tmp" >/dev/null 2>&1; then
+              echo "JSON=true"
+              jq -c 'if type=="object" then {keys:keys} else {type:type} end' "$tmp" | head -c 1000
+              echo
+            else
+              echo "JSON=false"
+              head -c 250 "$tmp" | tr '\n' ' '; echo
+            fi
             rm -f "$tmp"
-          }
-
-          probe "DI Yogyakarta" "https://data.jogjaprov.go.id/api/3/action/package_search?rows=1"
-          probe "Nusa Tenggara Barat" "https://data.ntbprov.go.id/api/3/action/package_search?rows=1"
-          probe "Kalimantan Tengah" "https://data.kalteng.go.id/api/3/action/package_search?rows=1"
-          probe "Kalimantan Selatan" "https://data.kalselprov.go.id/api/3/action/package_search?rows=1"
-          probe "Sulawesi Utara" "https://data.sulutprov.go.id/api/3/action/package_search?rows=1"
-          probe "Gorontalo" "https://data.gorontaloprov.go.id/api/3/action/package_search?rows=1"
-          probe "Sulawesi Tengah" "https://data.sultengprov.go.id/api/3/action/package_search?rows=1"
-          probe "Sulawesi Selatan" "https://data.sulselprov.go.id/api/3/action/package_search?rows=1"
-          probe "Sulawesi Tenggara" "https://data.sultraprov.go.id/api/3/action/package_search?rows=1"
-          probe "Maluku" "https://data.malukuprov.go.id/api/3/action/package_search?rows=1"
-          probe "Papua" "https://data.papua.go.id/api/3/action/package_search?rows=1"
+          done
