@@ -464,7 +464,7 @@ function renderEnterpriseData(){
       '<article class="region-row">'+
         '<div><strong>'+esc(a.kelurahan||a.KELURAHAN||'—')+'</strong>'+
         '<span>'+esc([a.kecamatan||a.KECAMATAN,a.kotamadya||a.KOTAMADYA].filter(Boolean).join(' · '))+'</span></div>'+
-        '<code>'+fmt(a.sum_keluha??a.SUM_Keluha||0)+' keluhan</code>'+
+        '<code>'+fmt(a.sum_keluha??a.SUM_Keluha??0)+' keluhan</code>'+
       '</article>'
     ).join('')
     :'<div class="empty-inline">Agregat keluhan PAM JAYA belum tersedia.</div>';
