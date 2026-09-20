@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="description" content="NusaAPI Hub — katalog terpadu API dan data pemerintah Indonesia." />
+  <meta name="color-scheme" content="light dark" />
+  <title>NusaAPI Hub — API Pemerintah Indonesia</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Lewati ke konten</a>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#" data-route="dashboard" aria-label="NusaAPI Hub">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" role="img"><path d="M9 34V15.8c0-2.3 2.6-3.7 4.5-2.4L29 24.2V14a4 4 0 0 1 8 0v20c0 2.5-2.8 3.9-4.8 2.4L17 25.8V34a4 4 0 1 1-8 0Z" fill="currentColor"/></svg>
+      </span>
+      <span><strong>NusaAPI</strong><small>Government Data Hub</small></span>
+    </a>
+
+    <nav class="desktop-nav" aria-label="Navigasi utama">
+      <button class="nav-item active" data-route="dashboard">Ringkasan</button>
+      <button class="nav-item" data-route="catalog">Katalog</button>
+      <button class="nav-item" data-route="explorer">Explorer</button>
+      <button class="nav-item" data-route="status">Status</button>
+    </nav>
+
+    <div class="header-actions">
+      <button id="themeToggle" class="icon-button" type="button" aria-label="Ubah tema" title="Ubah tema">
+        <span class="sun">☀</span><span class="moon">☾</span>
+      </button>
+      <a class="github-link" href="https://github.com/ImHeroesKiller" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+    </div>
+  </header>
+
+  <main id="main" class="app-shell">
+    <section id="view-dashboard" class="view active" data-view="dashboard">
+      <div class="hero panel">
+        <div class="hero-copy">
+          <span class="eyebrow"><i></i> Indonesia Government API Directory</span>
+          <h1>Satu tempat untuk menemukan dan mengeksplorasi <span>API pemerintah Indonesia.</span></h1>
+          <p>Katalog terpadu endpoint pemerintah pusat dan daerah — dengan status akses, metode autentikasi, dokumentasi, dan live test langsung dari browser.</p>
+          <div class="hero-actions">
+            <button class="button primary" data-route="catalog">Jelajahi Katalog <span>→</span></button>
+            <button class="button secondary" data-route="explorer">Buka Unified Explorer</button>
+          </div>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="orb"><span>API</span></div>
+          <div class="orbit orbit-1"><i></i></div>
+          <div class="orbit orbit-2"><i></i><i></i></div>
+          <div class="code-float code-a">GET /data</div>
+          <div class="code-float code-b">200 JSON</div>
+          <div class="code-float code-c">OAuth 2.0</div>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="statsGrid" aria-live="polite"></div>
+
+      <div class="dashboard-grid">
+        <section class="panel feature-panel">
+          <div class="section-head">
+            <div><span class="kicker">Akses cepat</span><h2>Sumber unggulan</h2></div>
+            <button class="text-button" data-route="catalog">Lihat semua →</button>
+          </div>
+          <div id="featuredGrid" class="featured-grid"></div>
+        </section>
+
+        <aside class="panel coverage-panel">
+          <div class="section-head compact">
+            <div><span class="kicker">Coverage</span><h2>Model akses</h2></div>
+          </div>
+          <div id="accessBreakdown" class="access-breakdown"></div>
+          <div class="notice-mini">
+            <span>ⓘ</span>
+            <p>GitHub Pages tidak dapat menyimpan API key atau OAuth secret dengan aman. Endpoint ber-secret ditandai <strong>server-side</strong>.</p>
+          </div>
+        </aside>
+      </div>
+
+      <section class="panel architecture-panel">
+        <div class="section-head">
+          <div><span class="kicker">Arsitektur</span><h2>Bagaimana data disatukan</h2></div>
+        </div>
+        <div class="architecture-flow">
+          <div class="arch-node"><b>01</b><strong>Registry</strong><span>data/apis.json</span></div>
+          <span class="arch-arrow">→</span>
+          <div class="arch-node"><b>02</b><strong>Adapter</strong><span>REST · CKAN · FHIR · ArcGIS</span></div>
+          <span class="arch-arrow">→</span>
+          <div class="arch-node accent"><b>03</b><strong>Unified UI</strong><span>Search · Filter · Live Test</span></div>
+        </div>
+      </section>
+    </section>
+
+    <section id="view-catalog" class="view" data-view="catalog">
+      <div class="page-heading">
+        <div><span class="eyebrow"><i></i> API Registry</span><h1>Katalog API Pemerintah</h1><p>Telusuri sumber berdasarkan instansi, wilayah, teknologi, dan metode akses.</p></div>
+        <div class="catalog-count"><strong id="catalogCount">0</strong><span>sumber tampil</span></div>
+      </div>
+
+      <div class="toolbar panel">
+        <label class="search-box">
+          <span>⌕</span>
+          <input id="catalogSearch" type="search" placeholder="Cari: BMKG, kesehatan, Jakarta, CKAN..." autocomplete="off" />
+          <kbd>/</kbd>
+        </label>
+        <select id="levelFilter" aria-label="Filter tingkat pemerintahan">
+          <option value="all">Semua tingkat</option>
+          <option value="pusat">Pemerintah pusat</option>
+          <option value="daerah">Pemerintah daerah</option>
+        </select>
+        <select id="authFilter" aria-label="Filter autentikasi">
+          <option value="all">Semua akses</option>
+          <option value="none">Tanpa autentikasi</option>
+          <option value="secure">Key / OAuth / Restricted</option>
+        </select>
+      </div>
+
+      <div id="categoryChips" class="chip-row" aria-label="Filter kategori"></div>
+      <div id="catalogGrid" class="catalog-grid" aria-live="polite"></div>
+      <div id="emptyState" class="empty-state panel" hidden>
+        <div>⌕</div><h3>Tidak ada sumber yang cocok</h3><p>Ubah kata kunci atau reset filter katalog.</p><button id="resetFilters" class="button secondary">Reset filter</button>
+      </div>
+    </section>
+
+    <section id="view-explorer" class="view" data-view="explorer">
+      <div class="page-heading">
+        <div><span class="eyebrow"><i></i> Unified Search</span><h1>Data Explorer</h1><p>Cari dataset lintas portal CKAN yang tersedia langsung dari browser.</p></div>
+      </div>
+
+      <div class="explorer-layout">
+        <section class="panel explorer-control">
+          <div class="section-head compact"><div><span class="kicker">Query</span><h2>Pencarian lintas portal</h2></div></div>
+          <label class="field-label" for="explorerQuery">Kata kunci</label>
+          <div class="query-input">
+            <input id="explorerQuery" type="search" placeholder="Contoh: kemiskinan, UMKM, kesehatan" />
+            <button id="runExplorer" class="button primary">Cari data</button>
+          </div>
+          <div class="field-label with-hint"><span>Sumber CKAN</span><small>Pilih maksimal 6</small></div>
+          <div id="explorerSources" class="source-select-list"></div>
+          <div class="notice-mini warning">
+            <span>⚠</span>
+            <p>Browser menerapkan CORS. Portal yang aktif sekalipun dapat menolak request lintas domain; kegagalan CORS bukan berarti API mati.</p>
+          </div>
+        </section>
+
+        <section class="panel explorer-results">
+          <div class="section-head compact">
+            <div><span class="kicker">Response</span><h2>Hasil pencarian</h2></div>
+            <span id="explorerMeta" class="muted-badge">Belum dijalankan</span>
+          </div>
+          <div id="explorerOutput" class="explorer-output initial">
+            <div class="empty-illustration">{ }</div>
+            <h3>Mulai dari sebuah kata kunci</h3>
+            <p>NusaAPI akan menjalankan request paralel ke sumber yang dipilih dan menggabungkan hasilnya di sini.</p>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="view-status" class="view" data-view="status">
+      <div class="page-heading">
+        <div><span class="eyebrow"><i></i> Access Matrix</span><h1>Status & Kesiapan Akses</h1><p>Status adalah snapshot referensi; tombol live test pada detail API memberi hasil aktual dari browser Anda.</p></div>
+      </div>
+      <div id="statusSummary" class="stats-grid status-stats"></div>
+      <section class="panel status-table-panel">
+        <div class="table-wrap">
+          <table class="status-table">
+            <thead><tr><th>Sumber</th><th>Instansi</th><th>Tingkat</th><th>Auth</th><th>Status</th><th>Akses Browser</th></tr></thead>
+            <tbody id="statusTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <nav class="mobile-nav" aria-label="Navigasi mobile">
+    <button class="active" data-route="dashboard"><span>⌂</span><small>Ringkasan</small></button>
+    <button data-route="catalog"><span>▦</span><small>Katalog</small></button>
+    <button data-route="explorer"><span>⌕</span><small>Explorer</small></button>
+    <button data-route="status"><span>◉</span><small>Status</small></button>
+  </nav>
+
+  <dialog id="apiDialog" class="api-dialog">
+    <div class="dialog-shell">
+      <div class="dialog-head">
+        <div><span id="dialogLevel" class="source-level"></span><h2 id="dialogTitle"></h2><p id="dialogAgency"></p></div>
+        <button id="dialogClose" class="icon-button close-button" aria-label="Tutup detail">×</button>
+      </div>
+      <div id="dialogBody" class="dialog-body"></div>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <footer class="footer">
+    <span>NusaAPI Hub · independent directory</span>
+    <span>Data tetap milik dan bersumber dari instansi pemerintah terkait.</span>
+  </footer>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
