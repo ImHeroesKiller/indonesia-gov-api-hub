@@ -23,7 +23,11 @@
       "portalStatus": "up",
       "description": "Prakiraan cuaca 3 harian per kelurahan/desa melalui REST API publik tanpa autentikasi.",
       "portalUrl": "https://data.bmkg.go.id/prakiraan-cuaca/",
-      "apiUrl": "https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4={kode_wilayah_tingkat_iv}"
+      "apiUrl": "https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4={kode_wilayah_tingkat_iv}",
+      "domains": [
+        "weather",
+        "climate"
+      ]
     },
     {
       "id": "bmkg-earthquake",
@@ -35,7 +39,11 @@
       "portalStatus": "up",
       "description": "Data gempa terbaru, M5+, dan gempa dirasakan dalam format JSON publik tanpa autentikasi.",
       "portalUrl": "https://data.bmkg.go.id/gempabumi/",
-      "apiUrl": "https://data.bmkg.go.id/DataMKG/TEWS/"
+      "apiUrl": "https://data.bmkg.go.id/DataMKG/TEWS/",
+      "domains": [
+        "disaster",
+        "geophysics"
+      ]
     },
     {
       "id": "big-admin-boundaries",
@@ -47,7 +55,11 @@
       "portalStatus": "up",
       "description": "Data geospasial batas desa/kelurahan melalui ArcGIS REST query publik tanpa autentikasi.",
       "portalUrl": "https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/Administrasi_AR_KelDesa_10K/MapServer",
-      "apiUrl": "https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/Administrasi_AR_KelDesa_10K/MapServer/0/query"
+      "apiUrl": "https://geoservices.big.go.id/rbi/rest/services/BATASWILAYAH/Administrasi_AR_KelDesa_10K/MapServer/0/query",
+      "domains": [
+        "geospatial",
+        "administration"
+      ]
     },
     {
       "id": "banten-ckan",
@@ -59,7 +71,18 @@
       "portalStatus": "up",
       "description": "Katalog dataset publik Pemerintah Provinsi Banten melalui CKAN Action API tanpa autentikasi untuk operasi baca.",
       "portalUrl": "https://data.bantenprov.go.id/",
-      "apiUrl": "https://data.bantenprov.go.id/api/3/action/package_search"
+      "apiUrl": "https://data.bantenprov.go.id/api/3/action/package_search",
+      "domains": [
+        "education",
+        "health",
+        "economy",
+        "environment",
+        "agriculture",
+        "demography",
+        "social",
+        "employment",
+        "finance"
+      ]
     },
     {
       "id": "grobogan-ckan",
@@ -71,7 +94,18 @@
       "portalStatus": "up",
       "description": "Katalog dataset publik Kabupaten Grobogan melalui CKAN Action API tanpa autentikasi.",
       "portalUrl": "https://opendata.grobogan.go.id/",
-      "apiUrl": "https://opendata.grobogan.go.id/api/3/action/package_search"
+      "apiUrl": "https://opendata.grobogan.go.id/api/3/action/package_search",
+      "domains": [
+        "education",
+        "health",
+        "economy",
+        "environment",
+        "agriculture",
+        "demography",
+        "social",
+        "employment",
+        "finance"
+      ]
     },
     {
       "id": "foodstation-store",
@@ -84,7 +118,11 @@
       "portalStatus": "up",
       "description": "Katalog produk pangan, harga, kategori dan status stok melalui REST API resmi Food Station tanpa autentikasi.",
       "portalUrl": "https://foodstation.id/shop/",
-      "apiUrl": "https://foodstation.id/wp-json/wc/store/products"
+      "apiUrl": "https://foodstation.id/wp-json/wc/store/products",
+      "domains": [
+        "food",
+        "commerce"
+      ]
     },
     {
       "id": "pamjaya-complaints",
@@ -97,7 +135,11 @@
       "portalStatus": "up",
       "description": "Data agregat keluhan pelanggan per kelurahan melalui ArcGIS REST resmi PAM JAYA tanpa menampilkan data pelanggan individual.",
       "portalUrl": "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer",
-      "apiUrl": "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer/3/query"
+      "apiUrl": "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer/3/query",
+      "domains": [
+        "water",
+        "public-service"
+      ]
     },
     {
       "id": "waskita-posts",
@@ -110,7 +152,74 @@
       "portalStatus": "up",
       "description": "Publikasi korporasi terbaru dari REST API resmi Waskita Karya tanpa autentikasi.",
       "portalUrl": "https://www.waskita.co.id/",
-      "apiUrl": "https://www.waskita.co.id/wp-json/wp/v2/posts"
+      "apiUrl": "https://www.waskita.co.id/wp-json/wp/v2/posts",
+      "domains": [
+        "infrastructure",
+        "corporate"
+      ]
+    },
+    {
+      "id": "jakarta-transport",
+      "name": "Transportasi Umum DKI Jakarta",
+      "agency": "Pemerintah Provinsi DKI Jakarta",
+      "level": "daerah",
+      "type": "ArcGIS REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "domains": [
+        "transport"
+      ],
+      "description": "Titik transportasi umum Jakarta melalui FeatureServer publik, termasuk fungsi/moda transportasi tanpa autentikasi.",
+      "portalUrl": "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Titik_Transportasi_Umum_Jakarta_v3/FeatureServer/26",
+      "apiUrl": "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Titik_Transportasi_Umum_Jakarta_v3/FeatureServer/26/query"
+    },
+    {
+      "id": "jakarta-roads",
+      "name": "Peta Jalan DKI Jakarta",
+      "agency": "Dinas Cipta Karya, Tata Ruang dan Pertanahan Provinsi DKI Jakarta",
+      "level": "daerah",
+      "type": "ArcGIS REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "domains": [
+        "infrastructure",
+        "transport"
+      ],
+      "description": "Jaringan jalan DKI Jakarta dari Peta Dasar skala 1:1000 melalui FeatureServer publik tanpa autentikasi.",
+      "portalUrl": "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Peta_Jalan_DKI/FeatureServer",
+      "apiUrl": "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Peta_Jalan_DKI/FeatureServer/1/query"
+    },
+    {
+      "id": "jakarta-rdtr",
+      "name": "RDTR DKI Jakarta 2022",
+      "agency": "Pemerintah Provinsi DKI Jakarta",
+      "level": "daerah",
+      "type": "ArcGIS REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "domains": [
+        "urban-planning",
+        "infrastructure"
+      ],
+      "description": "Rencana pola ruang RDTR DKI Jakarta 2022 melalui FeatureServer publik tanpa autentikasi.",
+      "portalUrl": "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/rdtr_2022_new/FeatureServer",
+      "apiUrl": "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/rdtr_2022_new/FeatureServer/0/query"
+    },
+    {
+      "id": "esdm-migas",
+      "name": "ESDM Data Migas",
+      "agency": "Kementerian Energi dan Sumber Daya Mineral",
+      "level": "pusat",
+      "type": "ArcGIS REST",
+      "auth": "none",
+      "portalStatus": "up",
+      "domains": [
+        "energy",
+        "oil-gas"
+      ],
+      "description": "Layer publik data migas ESDM, termasuk data sumur dan Wilayah Kerja Migas 2026 melalui MapServer REST tanpa autentikasi.",
+      "portalUrl": "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2",
+      "apiUrl": "https://datamigas.esdm.go.id/arcgis/rest/services/MDR2"
     }
   ]
 }
