@@ -56,12 +56,6 @@ jobs:
 
           curl_json             "https://opendata.grobogan.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc"             "live/grobogan-datasets.json"
 
-          # BUMD / public transport data exposed as open public interfaces
-          # TransJakarta publishes GTFS as public information; Jakarta ArcGIS exposes
-          # the corresponding public transport points through an unauthenticated REST layer.
-          curl_json \
-            "https://gis-dpmptsp.jakarta.go.id/arcgis/rest/services/Hosted/Titik_Transportasi_Umum_Jakarta_v3/FeatureServer/26/query?where=1%3D1&outFields=jenis%2Cfungsi%2Cnama%2Calamat&returnGeometry=true&outSR=4326&resultRecordCount=2000&f=geojson" \
-            "live/jakarta-public-transport.geojson"
 
           # Strict validation: deploy only valid no-auth public data.
           jq -e '(.data|type=="array") and (.data|length>0)' live/weather-kemayoran.json >/dev/null
@@ -74,7 +68,6 @@ jobs:
 
           jq -e '.success == true and (.result.results|type=="array")' live/banten-datasets.json >/dev/null
           jq -e '.success == true and (.result.results|type=="array")' live/grobogan-datasets.json >/dev/null
-          jq -e '.type == "FeatureCollection" and (.features|type=="array") and (.features|length>0)' live/jakarta-public-transport.geojson >/dev/null
 
           cat > live/status.json <<EOF
           {
@@ -85,8 +78,7 @@ jobs:
               "bmkg_earthquake": true,
               "big_admin_boundaries": true,
               "banten_ckan": true,
-              "grobogan_ckan": true,
-              "jakarta_bumd_transport": true
+              "grobogan_ckan": true
             }
           }
           EOF
