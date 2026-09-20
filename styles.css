@@ -272,3 +272,14 @@ html[data-theme=dark]{--bg:#07101d;--card:rgba(12,23,39,.9);--solid:#0e1a2b;--so
 .regional-coverage-card>div{display:flex;justify-content:space-between;gap:8px}.regional-coverage-card span{font-size:10px;font-weight:800}.regional-coverage-card strong{font-size:20px;letter-spacing:-.04em}
 .regional-coverage-card small{font-size:8px;color:var(--muted)}.regional-coverage-card p{font-size:9px;color:var(--muted);line-height:1.4;margin:9px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 @media(max-width:1100px){.regional-coverage-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:720px){.regional-coverage-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:430px){.regional-coverage-grid{grid-template-columns:1fr}}
+
+.regional-dashboard-panel{margin-top:12px}
+.regional-dashboard-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,220px));gap:8px;margin:0 0 14px}
+.regional-dashboard-kpis>div{background:var(--soft);border:1px solid var(--line);border-radius:15px;padding:14px}
+.regional-dashboard-kpis span,.regional-dashboard-kpis small{display:block;color:var(--muted);font-size:9px}
+.regional-dashboard-kpis strong{display:block;font-size:24px;letter-spacing:-.04em;margin:5px 0}
+.dashboard-regions{grid-template-columns:repeat(5,1fr)}
+.regional-coverage-card small{display:block;margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+@media(max-width:1100px){.dashboard-regions{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:720px){.regional-dashboard-kpis{grid-template-columns:1fr 1fr}.dashboard-regions{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:430px){.regional-dashboard-kpis,.dashboard-regions{grid-template-columns:1fr}}
