@@ -163,6 +163,157 @@ jobs:
           fetch_indicator "environment-quality" "kualitas lingkungan"
           fetch_indicator "agriculture-production" "produksi pertanian"
 
+          # Direct numeric statistics from Banten public CKAN DataStore
+          curl_json "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=6e533cef-056d-4dbc-a689-8f388d6cb6c7&limit=100" "tmp-domains/stat-unemployment.json"
+          curl_json "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=cabba131-d45d-4920-b224-2f0ade451466&limit=250" "tmp-domains/stat-poverty.json"
+          curl_json "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=785712cd-82a9-44ed-a6fe-3d54ec3432c8&limit=100" "tmp-domains/stat-revenue.json"
+          curl_json "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=ec8cc1b4-9f87-46fd-98cb-d2aab92fb52a&limit=50" "tmp-domains/stat-smk.json"
+          curl_json "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=07164307-c64e-432a-aaac-d27b5196df22&limit=50" "tmp-domains/stat-hospital-beds.json"
+          curl_json "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=143df65f-35ee-4419-91b6-b289e368a488&limit=50" "tmp-domains/stat-waste.json"
+          curl_json "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=e3548ec4-68b5-44fc-bd8c-fcf514c2007d&limit=500" "tmp-domains/stat-agriculture.json"
+          curl_json "https://data.bantenprov.go.id/api/3/action/datastore_search?resource_id=60a377b4-d6a0-401f-ad82-dd30e7780393&limit=1000" "tmp-domains/stat-ihk.json"
+
+          jq -n \
+            --slurpfile unemployment tmp-domains/stat-unemployment.json \
+            --slurpfile poverty tmp-domains/stat-poverty.json \
+            --slurpfile revenue tmp-domains/stat-revenue.json \
+            --slurpfile smk tmp-domains/stat-smk.json \
+            --slurpfile beds tmp-domains/stat-hospital-beds.json \
+            --slurpfile waste tmp-domains/stat-waste.json \
+            --slurpfile agriculture tmp-domains/stat-agriculture.json \
+            --slurpfile ihk tmp-domains/stat-ihk.json \
+            --slurpfile food live/foodstation-products.json \
+            'def n:
+               if type=="number" then .
+               elif type=="string" then (gsub("\\.";"")|gsub(",";".")|tonumber? // 0)
+               else 0 end;
+             {
+               generated_at:(now|todateiso8601),
+               employment:{
+                 label:"Tingkat Pengangguran Terbuka kabupaten/kota Banten",
+                 year:2024,
+                 month:"Agustus",
+                 unit:"persen",
+                 records:[
+                   $unemployment[0].result.records[]
+                   | select(.tahun==2024 and .bulan=="Agustus")
+                   | select(.["persentase tingkat pengangguran terbuka (TPT) (%)"]!="")
+                   | {
+                       area:.["kabupaten kota"],
+                       value:(.["persentase tingkat pengangguran terbuka (TPT) (%)"]|n)
+                     }
+                 ]
+               },
+               poverty:{
+                 label:"Jumlah penduduk miskin Banten",
+                 year:2024,
+                 unit:"ribu orang",
+                 record:(
+                   [
+                     $poverty[0].result.records[]
+                     | select((.provinsi|ascii_downcase)=="banten" and .tahun==2024)
+                     | {
+                         province:.provinsi,
+                         value:(.["jumlah penduduk miskin (ribu)"]|n)
+                       }
+                   ][0] // null
+                 )
+               },
+               revenue:{
+                 label:"Realisasi pendapatan Pemerintah Provinsi Banten",
+                 year:2024,
+                 unit:"rupiah",
+                 records:[
+                   $revenue[0].result.records[]
+                   | {
+                       category:.["Jenis pendapatan"],
+                       value_thousand:(.value|n)
+                     }
+                 ]
+               },
+               education:{
+                 label:"Jumlah Sekolah Menengah Kejuruan Banten",
+                 unit:"unit",
+                 series:[
+                   $smk[0].result.records[]
+                   | {year:.Tahun,value:(.Unit|n)}
+                 ]
+               },
+               health:{
+                 label:"Tempat tidur rumah sakit Banten",
+                 unit:"unit",
+                 series:[
+                   $beds[0].result.records[]
+                   | {year:.Tahun,value:(.Unit|n)}
+                 ]
+               },
+               environment:{
+                 label:"Sampah spesifik/kondisi khusus tertangani Banten",
+                 unit:"ton",
+                 series:[
+                   $waste[0].result.records[]
+                   | {year:.Tahun,value:(.Ton|n)}
+                 ]
+               },
+               agriculture:{
+                 label:"Produksi perkebunan Banten",
+                 year:2024,
+                 unit:"ton",
+                 records:[
+                   $agriculture[0].result.records[]
+                   | select(.tahun==2024)
+                   | {
+                       area:.["kabupaten kota"],
+                       commodity:.["jenis tanaman"],
+                       value:(.["jumlah produksi perkebunan"]|n)
+                     }
+                 ]
+               },
+               ihk:{
+                 label:"Indeks Harga Konsumen kota pantauan di Banten",
+                 unit:"index",
+                 records:[
+                   $ihk[0].result.records[]
+                   | select((.provinsi|ascii_downcase)=="provinsi banten" and (.tahun==2023 or .tahun==2024))
+                   | {
+                       city:.["kabupaten kota"],
+                       year:.tahun,
+                       value:(.["indeks harga konsumen"]|n)
+                     }
+                   | select(.value>0)
+                 ]
+               },
+               food_prices:{
+                 label:"Harga produk pangan Food Station",
+                 currency:"IDR",
+                 products:[
+                   $food[0][]
+                   | {
+                       name,
+                       price:(
+                         ((.prices.price|tonumber? // 0) /
+                         (10 ^ (.prices.currency_minor_unit|tonumber? // 0)))
+                       ),
+                       in_stock:.is_in_stock,
+                       permalink
+                     }
+                   | select(.price>0)
+                 ][:12]
+               }
+             }' > live/direct-stats.json
+
+          jq -e '
+            (.employment.records|length)>0 and
+            (.poverty.record.value>0) and
+            (.revenue.records|length)>0 and
+            (.education.series|length)>0 and
+            (.health.series|length)>0 and
+            (.environment.series|length)>0 and
+            (.agriculture.records|length)>0 and
+            (.ihk.records|length)>0 and
+            (.food_prices.products|length)>0
+          ' live/direct-stats.json >/dev/null
+
           # Thematic domain discovery from public CKAN catalogs
           for spec in \
             "education:pendidikan" \
@@ -302,7 +453,8 @@ jobs:
               "jakarta_road_features": $(jq -r '.operational.roads.count' live/domain-summary.json),
               "jakarta_rdtr_features": $(jq -r '.operational.rdtr.count' live/domain-summary.json),
               "esdm_oil_gas_wells": $(jq -r '.operational.oil_gas_wells.count' live/domain-summary.json),
-              "esdm_working_areas_2026": $(jq -r '.operational.oil_gas_working_areas_2026.count' live/domain-summary.json)
+              "esdm_working_areas_2026": $(jq -r '.operational.oil_gas_working_areas_2026.count' live/domain-summary.json),
+              "direct_statistics": 9
             },
             "domains": $DOMAIN_COUNTS
           }
