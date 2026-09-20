@@ -1,0 +1,82 @@
+name: Probe Investment Data Sources
+
+on:
+  push:
+    paths:
+      - ".github/workflows/probe-investment.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe official investment data sources
+        shell: bash
+        run: |
+          set +e
+
+          probe_json () {
+            name="$1"; url="$2"
+            echo "===== $name ====="
+            tmp=$(mktemp)
+            code=$(curl -L --retry 1 --connect-timeout 10 --max-time 30 -A "NusaData-Investment-Probe/1.0" -H "Accept: application/json" -sS -w "%{http_code}" -o "$tmp" "$url")
+            echo "HTTP=$code BYTES=$(wc -c < "$tmp")"
+            if jq -e . "$tmp" >/dev/null 2>&1; then
+              echo "JSON=valid"
+              jq -c 'if type=="object" then keys else {type:type,length:length} end' "$tmp" | head -c 1200
+              echo
+            else
+              echo "JSON=invalid"
+              head -c 180 "$tmp" | tr '\n' ' '; echo
+            fi
+            rm -f "$tmp"
+          }
+
+          probe_json "Kemenperin CKAN" "https://satudata.kemenperin.go.id/id/api/3/action/package_search?q=industri&rows=3"
+          probe_json "Kemenperin nikel" "https://satudata.kemenperin.go.id/id/api/3/action/package_search?q=nikel&rows=5"
+          probe_json "Kemenperin kawasan industri" "https://satudata.kemenperin.go.id/id/api/3/action/package_search?q=kawasan%20industri&rows=5"
+
+          probe_json "Kemendag guessed API root" "https://satudata.kemendag.go.id/api"
+          probe_json "Kemendag dashboard guess" "https://satudata.kemendag.go.id/api/dashboard"
+
+          probe_json "DJP wp-json" "https://stats.pajak.go.id/wp-json/"
+          probe_json "Beacukai wp-json" "https://www.beacukai.go.id/wp-json/"
+          probe_json "Kemenkeu APBN api root" "https://data-apbn.kemenkeu.go.id/api/"
+          probe_json "DJPK api root" "https://djpk.kemenkeu.go.id/api/"
+          probe_json "BI api root" "https://www.bi.go.id/api/"
+          probe_json "Kemendagri api root" "https://www.kemendagri.go.id/api/"
+
+          discover () {
+            name="$1"; url="$2"; host="$3"
+            echo "===== DISCOVER $name ====="
+            work=$(mktemp -d)
+            curl -L --connect-timeout 10 --max-time 30 -A "Mozilla/5.0 NusaData" -sS "$url" -o "$work/page.html"
+            echo "-- api strings in html --"
+            grep -Eoi 'https?://[^" '\''<> ]+|[/][A-Za-z0-9_.?=&:%{}-]*api[A-Za-z0-9_./?=&:%{}-]*' "$work/page.html" | grep -Ei 'api|json|ajax|data' | head -n 80 || true
+            echo "-- scripts --"
+            grep -Eo '<script[^>]+src=["'\''][^"'\'']+["'\'']' "$work/page.html" | sed -E 's/.*src=["'\'']([^"'\'']+).*/\1/' | head -n 25 > "$work/scripts"
+            cat "$work/scripts"
+            : > "$work/js"
+            while read -r src; do
+              case "$src" in
+                http*) full="$src" ;;
+                //*) full="https:$src" ;;
+                /*) full="https://$host$src" ;;
+                *) full="https://$host/$src" ;;
+              esac
+              curl -L --connect-timeout 6 --max-time 20 -A "Mozilla/5.0" -sS "$full" >> "$work/js"
+              echo >> "$work/js"
+            done < "$work/scripts"
+            echo "-- api/fetch contexts in JS --"
+            grep -Eo '.{0,140}(https?://[^"'\'' ]+|/api/[^"'\'' ]+|fetch\(|axios\.|ajax).{0,260}' "$work/js" | head -n 180 || true
+          }
+
+          discover "Kemendag" "https://satudata.kemendag.go.id/" "satudata.kemendag.go.id"
+          discover "Data APBN" "https://data-apbn.kemenkeu.go.id/" "data-apbn.kemenkeu.go.id"
+          discover "DJPK APBD" "https://djpk.kemenkeu.go.id/portal/data/apbd" "djpk.kemenkeu.go.id"
+          discover "DJP Stats" "https://stats.pajak.go.id/" "stats.pajak.go.id"
+          discover "Beacukai Stats" "https://www.beacukai.go.id/statistik-penerimaan" "www.beacukai.go.id"
+          discover "BI SEKI" "https://www.bi.go.id/id/statistik/ekonomi-keuangan/seki/default.aspx" "www.bi.go.id"
+          discover "Kemendagri Profil" "https://www.kemendagri.go.id/profil/daerah" "www.kemendagri.go.id"
