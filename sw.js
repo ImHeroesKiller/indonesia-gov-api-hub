@@ -1,4 +1,4 @@
-const CACHE='nusadata-v4-public-rest-only';
+const CACHE='nusadata-v5-more-public-rest';
 
 const CORE=[
   './',
