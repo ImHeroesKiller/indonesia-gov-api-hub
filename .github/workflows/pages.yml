@@ -23,6 +23,24 @@ jobs:
         run: |
           node --check app.js
           node -e "const x=JSON.parse(require('fs').readFileSync('data/apis.json','utf8')); if(!x.policy?.public_rest_only) process.exit(1); if(x.sources.some(s=>s.auth!=='none')) process.exit(1); console.log('Public REST allowlist OK:', x.sources.length, 'sources')"
+          node <<'NODE'
+          const fs=require('fs');
+          const html=fs.readFileSync('index.html','utf8');
+          const ids=[...html.matchAll(/id="([^"]+)"/g)].map(x=>x[1]);
+          const dup=ids.filter((x,i)=>ids.indexOf(x)!==i);
+          if(dup.length){console.error('Duplicate IDs:',[...new Set(dup)]);process.exit(1)}
+          const required=[
+            'dashboardHealth','dashboardUpdated','activeSourceCount','dashboardDatasetCount',
+            'bigSummaryCount','dashboardM5Count','enterpriseSummaryCount','dashboardPamTotal',
+            'weatherNow','latestQuake','dashboardCoverageBars','dashboardSourceMix',
+            'dashboardQuakes','dashboardEnterpriseHighlights','dashboardDatasets',
+            'dashboardEnterpriseFeed','dashboardSourceHealth','foodstationProducts',
+            'pamjayaTop','waskitaPosts','sourceGrid'
+          ];
+          const missing=required.filter(id=>!ids.includes(id));
+          if(missing.length){console.error('Missing dashboard IDs:',missing);process.exit(1)}
+          console.log('Dashboard DOM contract OK:',required.length,'required IDs');
+          NODE
 
       - name: Fetch verified public REST data
         shell: bash
@@ -90,6 +108,7 @@ jobs:
           {
             "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "policy": "public-rest-no-auth-only",
+            "source_count": 8,
             "sources": {
               "bmkg_weather": true,
               "bmkg_earthquake": true,
@@ -99,6 +118,17 @@ jobs:
               "foodstation_store": true,
               "pamjaya_complaints": true,
               "waskita_posts": true
+            },
+            "metrics": {
+              "big_features": $(jq -r '.count' live/big-village-count.json),
+              "banten_datasets": $(jq -r '.result.count' live/banten-datasets.json),
+              "grobogan_datasets": $(jq -r '.result.count' live/grobogan-datasets.json),
+              "earthquake_m5_records": $(jq -r '.Infogempa.gempa|length' live/earthquake-m5.json),
+              "earthquake_felt_records": $(jq -r '.Infogempa.gempa|length' live/earthquake-felt.json),
+              "foodstation_products": $(jq -r 'length' live/foodstation-products.json),
+              "pamjaya_areas": $(jq -r '.features|length' live/pamjaya-complaints.json),
+              "pamjaya_complaints": $(jq -r '[.features[].attributes.sum_keluha // 0] | add // 0' live/pamjaya-complaints.json),
+              "waskita_posts": $(jq -r 'length' live/waskita-posts.json)
             }
           }
           EOF
