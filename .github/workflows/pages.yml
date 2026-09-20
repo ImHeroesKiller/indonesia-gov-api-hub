@@ -56,6 +56,19 @@ jobs:
 
           curl_json             "https://opendata.grobogan.go.id/api/3/action/package_search?rows=20&sort=metadata_modified%20desc"             "live/grobogan-datasets.json"
 
+          # BUMN / BUMD official public REST APIs
+          curl_json \
+            "https://foodstation.id/wp-json/wc/store/products?per_page=24" \
+            "live/foodstation-products.json"
+
+          curl_json \
+            "https://geoportal.pamjaya.co.id/server/rest/services/DATA/KELUHAN/MapServer/3/query?where=1%3D1&outFields=kelurahan%2Ckecamatan%2Ckotamadya%2Csum_keluha&returnGeometry=false&f=json" \
+            "live/pamjaya-complaints.json"
+
+          curl_json \
+            "https://www.waskita.co.id/wp-json/wp/v2/posts?per_page=12&_fields=id,date,link,title,excerpt" \
+            "live/waskita-posts.json"
+
 
           # Strict validation: deploy only valid no-auth public data.
           jq -e '(.data|type=="array") and (.data|length>0)' live/weather-kemayoran.json >/dev/null
@@ -69,6 +82,10 @@ jobs:
           jq -e '.success == true and (.result.results|type=="array")' live/banten-datasets.json >/dev/null
           jq -e '.success == true and (.result.results|type=="array")' live/grobogan-datasets.json >/dev/null
 
+          jq -e 'type=="array" and length>0' live/foodstation-products.json >/dev/null
+          jq -e '(.features|type=="array") and (.features|length>0)' live/pamjaya-complaints.json >/dev/null
+          jq -e 'type=="array" and length>0' live/waskita-posts.json >/dev/null
+
           cat > live/status.json <<EOF
           {
             "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
@@ -78,7 +95,10 @@ jobs:
               "bmkg_earthquake": true,
               "big_admin_boundaries": true,
               "banten_ckan": true,
-              "grobogan_ckan": true
+              "grobogan_ckan": true,
+              "foodstation_store": true,
+              "pamjaya_complaints": true,
+              "waskita_posts": true
             }
           }
           EOF
