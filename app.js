@@ -623,35 +623,199 @@ const indicatorMeta={
   'agriculture-production':'Produksi Pertanian'
 };
 
-function statLatest(series=[]){return [...series].sort((a,b)=>String(b.year||'').localeCompare(String(a.year||'')))[0]||null}
-function compactIDR(v){return new Intl.NumberFormat('id-ID',{notation:'compact',maximumFractionDigits:1}).format(Number(v)||0)}
-function directStatCards(){
-  const d=state.directStats||{}, unemployment=[...(d.employment?.records||[])].sort((a,b)=>b.value-a.value);
-  const smk=statLatest(d.education?.series), beds=statLatest(d.health?.series), waste=statLatest(d.environment?.series);
-  const revenue=(d.revenue?.records||[]).reduce((s,x)=>s+(Number(x.value_thousand)||0),0)*1000;
-  const agri=(d.agriculture?.records||[]).reduce((s,x)=>s+(Number(x.value)||0),0);
-  const ihk=[...(d.ihk?.records||[])].sort((a,b)=>(b.year-a.year)||(b.value-a.value))[0];
-  const food=[...(d.food_prices?.products||[])].sort((a,b)=>a.price-b.price)[0];
-  return [
-    {label:'Pengangguran',value:unemployment[0]?unemployment[0].value.toLocaleString('id-ID')+'%':'—',meta:unemployment[0]?unemployment[0].area+' · '+d.employment.year:'Banten'},
-    {label:'Kemiskinan',value:d.poverty?.record?fmt(d.poverty.record.value)+' rb':'—',meta:'Banten · '+(d.poverty?.year||'')},
-    {label:'Pendapatan Daerah',value:revenue?'Rp '+compactIDR(revenue):'—',meta:'Banten · '+(d.revenue?.year||'')},
-    {label:'SMK',value:smk?fmt(smk.value):'—',meta:'sekolah · '+(smk?.year||'')},
-    {label:'Tempat Tidur RS',value:beds?fmt(beds.value):'—',meta:'unit · '+(beds?.year||'')},
-    {label:'Sampah Tertangani',value:waste?fmt(waste.value):'—',meta:'ton · '+(waste?.year||'')},
-    {label:'Produksi Perkebunan',value:agri?compactIDR(agri):'—',meta:'ton · '+(d.agriculture?.year||'')},
-    {label:'IHK',value:ihk?ihk.value.toLocaleString('id-ID'):'—',meta:(ihk?.city||'Banten')+' · '+(ihk?.year||'')},
-    {label:'Harga Pangan',value:food?'Rp '+fmt(food.price):'—',meta:food?.name||'Food Station'}
-  ];
+function moneyCompact(value){
+  const n=Number(value)||0;
+  if(n>=1e12)return'Rp '+(n/1e12).toLocaleString('id-ID',{maximumFractionDigits:2})+' T';
+  if(n>=1e9)return'Rp '+(n/1e9).toLocaleString('id-ID',{maximumFractionDigits:2})+' M';
+  if(n>=1e6)return'Rp '+(n/1e6).toLocaleString('id-ID',{maximumFractionDigits:1})+' jt';
+  return idr(n);
 }
+
+function latestSeries(series=[]){
+  return [...series].sort((a,b)=>(Number(b.year)||0)-(Number(a.year)||0))[0]||null;
+}
+
+function directStatModel(){
+  const d=state.directStats||{};
+  const employment=Array.isArray(d.employment?.records)?d.employment.records:[];
+  const highest=[...employment].sort((a,b)=>(Number(b.value)||0)-(Number(a.value)||0))[0];
+  const lowest=[...employment].sort((a,b)=>(Number(a.value)||0)-(Number(b.value)||0))[0];
+  const poverty=d.poverty?.record||null;
+
+  const revenueRows=Array.isArray(d.revenue?.records)?d.revenue.records:[];
+  const topRevenueNames=new Set([
+    'Pendapatan Asli Daerah (PAD)',
+    'Dana Perimbangan',
+    'Lain-lain Pendapatan yang Sah'
+  ]);
+  const revenue=revenueRows
+    .filter(x=>topRevenueNames.has(x.category))
+    .reduce((s,x)=>s+(Number(x.value_thousand)||0),0)*1000;
+
+  const education=latestSeries(d.education?.series);
+  const health=latestSeries(d.health?.series);
+  const environment=latestSeries(d.environment?.series);
+
+  const agriRows=Array.isArray(d.agriculture?.records)?d.agriculture.records:[];
+  const agricultureTotal=agriRows.reduce((s,x)=>s+(Number(x.value)||0),0);
+  const agriMap={};
+  agriRows.forEach(x=>{
+    const key=x.commodity||'Lainnya';
+    agriMap[key]=(agriMap[key]||0)+(Number(x.value)||0);
+  });
+  const agriRanking=Object.entries(agriMap)
+    .map(([commodity,value])=>({commodity,value}))
+    .sort((a,b)=>b.value-a.value);
+
+  const ihkRows=Array.isArray(d.ihk?.records)?d.ihk.records:[];
+  const cities=[...new Set(ihkRows.map(x=>x.city).filter(Boolean))];
+  const ihkChanges=cities.map(city=>{
+    const y23=ihkRows.find(x=>x.city===city&&Number(x.year)===2023);
+    const y24=ihkRows.find(x=>x.city===city&&Number(x.year)===2024);
+    const v23=Number(y23?.value)||0;
+    const v24=Number(y24?.value)||0;
+    return {
+      city,
+      value2023:v23,
+      value2024:v24,
+      change:v23>0&&v24>0?((v24/v23)-1)*100:null
+    };
+  }).filter(x=>x.value2024>0);
+  const ihkHighest=[...ihkChanges]
+    .filter(x=>Number.isFinite(x.change))
+    .sort((a,b)=>b.change-a.change)[0];
+
+  return {
+    highest,lowest,poverty,revenue,education,health,environment,
+    agricultureTotal,agriRanking,ihkChanges,ihkHighest
+  };
+}
+
+function statCard(label,value,meta,note=''){
+  return '<article class="direct-stat-card">'+
+    '<span>'+esc(label)+'</span>'+
+    '<strong>'+esc(value)+'</strong>'+
+    '<small>'+esc(meta)+'</small>'+
+    (note?'<p>'+esc(note)+'</p>':'')+
+  '</article>';
+}
+
 function renderDirectStats(){
-  const cards=directStatCards();
-  for(const id of ['dashboardDirectStats','directStatsDetail']){
-    const el=$('#'+id); if(!el)continue;
-    el.innerHTML=cards.map(x=>'<article class="direct-stat-card"><span>'+esc(x.label)+'</span><strong>'+esc(x.value)+'</strong><small>'+esc(x.meta)+'</small></article>').join('');
+  const d=state.directStats;
+  if(!d)return;
+
+  const m=directStatModel();
+  const cards=[
+    {
+      label:'TPT tertinggi',
+      value:m.highest?Number(m.highest.value).toLocaleString('id-ID',{maximumFractionDigits:2})+'%':'—',
+      meta:m.highest?.area||'Banten',
+      note:'Agustus 2024 · kab/kota'
+    },
+    {
+      label:'TPT terendah',
+      value:m.lowest?Number(m.lowest.value).toLocaleString('id-ID',{maximumFractionDigits:2})+'%':'—',
+      meta:m.lowest?.area||'Banten',
+      note:'Agustus 2024 · kab/kota'
+    },
+    {
+      label:'Penduduk miskin',
+      value:m.poverty?Number(m.poverty.value).toLocaleString('id-ID',{maximumFractionDigits:2})+' rb':'—',
+      meta:'Provinsi Banten · 2024',
+      note:'ribu orang'
+    },
+    {
+      label:'Realisasi pendapatan',
+      value:m.revenue?moneyCompact(m.revenue):'—',
+      meta:'Pemprov Banten · 2024',
+      note:'PAD + Dana Perimbangan + lain-lain sah'
+    },
+    {
+      label:'Jumlah SMK',
+      value:m.education?fmt(m.education.value):'—',
+      meta:'Banten · '+(m.education?.year||'—'),
+      note:'unit sekolah'
+    },
+    {
+      label:'Tempat tidur RS',
+      value:m.health?fmt(m.health.value):'—',
+      meta:'Banten · '+(m.health?.year||'—'),
+      note:'unit pada dataset sumber'
+    },
+    {
+      label:'Sampah tertangani',
+      value:m.environment?fmt(m.environment.value)+' ton':'—',
+      meta:'Banten · '+(m.environment?.year||'—'),
+      note:'sampah spesifik/kondisi khusus'
+    },
+    {
+      label:'Produksi perkebunan',
+      value:m.agricultureTotal?fmt(m.agricultureTotal)+' ton':'—',
+      meta:'Banten · 2024',
+      note:m.agriRanking[0]?'terbesar: '+m.agriRanking[0].commodity:'agregat komoditas'
+    },
+    {
+      label:'Perubahan IHK tertinggi',
+      value:m.ihkHighest&&Number.isFinite(m.ihkHighest.change)
+        ?(m.ihkHighest.change>=0?'+':'')+m.ihkHighest.change.toLocaleString('id-ID',{maximumFractionDigits:2})+'%'
+        :'—',
+      meta:m.ihkHighest?.city||'Kota pantauan Banten',
+      note:'perubahan indeks 2023 → 2024'
+    }
+  ];
+
+  const markup=cards.map(x=>statCard(x.label,x.value,x.meta,x.note)).join('');
+  const dashboard=$('#dashboardDirectStats');
+  if(dashboard)dashboard.innerHTML=markup;
+  const detail=$('#directStatsDetail');
+  if(detail)detail.innerHTML=markup;
+
+  const ihkMarkup=m.ihkChanges.length
+    ?m.ihkChanges.map(x=>
+      '<div class="stat-row">'+
+        '<div><strong>'+esc(x.city)+'</strong><span>IHK 2024 '+Number(x.value2024).toLocaleString('id-ID',{maximumFractionDigits:2})+'</span></div>'+
+        '<b class="'+(Number(x.change)>=0?'up':'down')+'">'+
+          (Number.isFinite(x.change)?(x.change>=0?'+':'')+x.change.toLocaleString('id-ID',{maximumFractionDigits:2})+'%':'—')+
+        '</b>'+
+      '</div>'
+    ).join('')
+    :'<div class="empty-inline">IHK belum tersedia.</div>';
+
+  const dashIhk=$('#dashboardIHK');
+  if(dashIhk)dashIhk.innerHTML='<div class="direct-list-title">IHK kota pantauan</div>'+ihkMarkup;
+  const ihkTable=$('#directIHKTable');
+  if(ihkTable)ihkTable.innerHTML=ihkMarkup;
+
+  const prices=Array.isArray(d.food_prices?.products)?d.food_prices.products:[];
+  const priceMarkup=prices.slice(0,8).map(p=>
+    '<a class="price-stat-card" href="'+esc(p.permalink||'https://foodstation.id/shop/')+'" target="_blank" rel="noopener">'+
+      '<span>'+esc(p.in_stock?'Tersedia':'Stok habis')+'</span>'+
+      '<strong>'+esc(p.name||'Produk pangan')+'</strong>'+
+      '<b>'+esc(idr(p.price))+'</b>'+
+    '</a>'
+  ).join('')||'<div class="empty-inline">Harga pangan belum tersedia.</div>';
+
+  const dashPrices=$('#dashboardFoodPrices');
+  if(dashPrices)dashPrices.innerHTML='<div class="direct-list-title">Harga pangan Food Station</div>'+priceMarkup;
+  const priceGrid=$('#directFoodPriceGrid');
+  if(priceGrid)priceGrid.innerHTML=priceMarkup;
+
+  const agri=$('#directAgriculture');
+  if(agri){
+    agri.innerHTML=m.agriRanking.slice(0,8).map((x,i)=>
+      '<div class="agri-row">'+
+        '<span><b>'+(i+1)+'</b>'+esc(x.commodity)+'</span>'+
+        '<strong>'+fmt(x.value)+' ton</strong>'+
+      '</div>'
+    ).join('')||'<div class="empty-inline">Data perkebunan belum tersedia.</div>';
   }
 }
-async function loadDirectStats(){try{state.directStats=await json(LIVE.directStats,15000)}catch{state.directStats={}} renderDirectStats()}
+
+async function loadDirectStats(){
+  try{state.directStats=await json(LIVE.directStats,15000)}
+  catch{state.directStats=null}
+  renderDirectStats();
+}
 
 function renderIndicators(){
   const el=$('#indicatorGrid');
